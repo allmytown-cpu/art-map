@@ -118,5 +118,29 @@
   "url": "https://sema.seoul.go.kr/kr/whatson/exhibition/detail",
   "desc": "참여작가: 권진규 / 휴관: 월요일, 1월 1일",
   "addedAt": "2026-09-13"
+ },
+ {
+  "id": "m19uc55s",
+  "source": "manual",
+  "sourceUrl": "https://neolook.com/archives/20260923a",
+  "adapter": "직접 입력",
+  "title": "새김에서 각인으로: 1946 - 1986, 오윤의 궤적",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2026-09-23",
+  "end": "2026-10-12",
+  "place": "동덕아트갤러리",
+  "area": "",
+  "sigungu": "",
+  "address": "서울 종로구 우정국로 68 동덕빌딩 B1",
+  "lat": null,
+  "lng": null,
+  "geo": null,
+  "thumbnail": "",
+  "price": "",
+  "phone": "",
+  "url": "https://neolook.com/archives/20260923a",
+  "desc": "",
+  "addedAt": "2026-09-13"
  }
 ]
