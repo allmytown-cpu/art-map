@@ -94,5 +94,29 @@
   "url": "https://apma.amorepacific.com/contents/exhibition/3858007/view.do",
   "desc": "참여작가: 백남준 로즈 와일리 키키 스미스 이불 구본창 캐롤 보브, 갈라 포라스 김 / 관람시간: : 오전 10시 ~ 오후 6시 (17시 30분 티켓 발권 마감) / 휴관: 월요일",
   "addedAt": "2026-09-13"
+ },
+ {
+  "id": "mou2spi",
+  "source": "manual",
+  "sourceUrl": "https://art-map.co.kr/exhibition/view.php?idx=31882",
+  "adapter": "art-map.co.kr",
+  "title": "권진규 상설전 《권진규의 영원한 집》",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2023-06-01",
+  "end": "2027-12-31",
+  "place": "서울시립미술관 남서울미술관",
+  "area": "서울",
+  "sigungu": "",
+  "address": "서울 관악구 남현동 1059-13",
+  "lat": 37.475985,
+  "lng": 126.979492,
+  "geo": "gazetteer",
+  "thumbnail": "https://art-map.co.kr/art-map/public//upload/2025/12/exhibition/254c4cc94d6efa23ae3dd4fc58e67475_1685582435.jpg",
+  "price": "무료",
+  "phone": "02-598-6246",
+  "url": "https://sema.seoul.go.kr/kr/whatson/exhibition/detail",
+  "desc": "참여작가: 권진규 / 휴관: 월요일, 1월 1일",
+  "addedAt": "2026-09-13"
  }
 ]
