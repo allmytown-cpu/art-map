@@ -142,5 +142,29 @@
   "url": "https://neolook.com/archives/20260923a",
   "desc": "",
   "addedAt": "2026-09-13"
+ },
+ {
+  "id": "m115mg2",
+  "source": "manual",
+  "sourceUrl": "https://www.opengallery.co.kr/exhibition/5409/",
+  "adapter": "opengallery.co.kr",
+  "title": "지금이라도 차차차를 해보면 어떨까?",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2026-09-11",
+  "end": "2026-09-19",
+  "place": "홍대갤러리 키르큐펠",
+  "area": "서울",
+  "sigungu": "",
+  "address": "서울특별시 마포구 와우산로25길 26 (서교동)",
+  "lat": null,
+  "lng": null,
+  "geo": null,
+  "thumbnail": "https://og-data.s3.amazonaws.com/media/exhibitions/thumb/5412/ei_5412.png",
+  "price": "무료",
+  "phone": "",
+  "url": "https://www.opengallery.co.kr/exhibition/5409/",
+  "desc": "참여작가: 간지쿵야!, 대룡, 데이지, 돼지엄마, 들국화, 백설, 양귀비, Young FL / 관람시간: 11:00 ~ 19:00 2026. 9. 11.(금) – 9.19.(토), *화요일 휴관* 11:00–19:00",
+  "addedAt": "2026-09-13"
  }
 ]
