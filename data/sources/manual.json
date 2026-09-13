@@ -166,5 +166,29 @@
   "url": "https://www.opengallery.co.kr/exhibition/5409/",
   "desc": "참여작가: 간지쿵야!, 대룡, 데이지, 돼지엄마, 들국화, 백설, 양귀비, Young FL / 관람시간: 11:00 ~ 19:00 2026. 9. 11.(금) – 9.19.(토), *화요일 휴관* 11:00–19:00",
   "addedAt": "2026-09-13"
+ },
+ {
+  "id": "m1151ft",
+  "source": "manual",
+  "sourceUrl": "https://www.opengallery.co.kr/exhibition/5389/",
+  "adapter": "opengallery.co.kr",
+  "title": "[한솥아트스페이스] 이상원 개인전 <레스토피아 : RESTOPIA>",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2026-08-08",
+  "end": "2026-09-19",
+  "place": "한솥 아트스페이스",
+  "area": "서울",
+  "sigungu": "",
+  "address": "서울특별시 강남구 압구정로 459 (청담동)",
+  "lat": null,
+  "lng": null,
+  "geo": null,
+  "thumbnail": "https://og-data.s3.amazonaws.com/media/exhibitions/thumb/5392/ei_5392.jpg",
+  "price": "무료",
+  "phone": "",
+  "url": "https://www.opengallery.co.kr/exhibition/5389/",
+  "desc": "참여작가: 이상원 / 관람시간: 10:30 ~ 19:30 이상원 개인전<레스토피아 : RESTOPIA> 전시기간 : 2026.08.08 – 09.19 운영시간 : 10:30 AM ~ 7:30 PM (일요일 휴관) 오시는길 : 한솥 아트스페이스 (서울시 강남구 압구정로 459 B1) 수인분당선 압구정로데오역 2번 출구 도보 10분 7호선 청담역 9번 출구 도보 10분 *주차공간이 협소한 관계로 인근 유료 주차장(네이처포엠) 및 대중교통 이용을 부탁드립니다. 전시문의 : 02-2033-9642 관람료 : 무료",
+  "addedAt": "2026-09-13"
  }
 ]
