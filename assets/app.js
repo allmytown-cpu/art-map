@@ -632,8 +632,25 @@
     });
   }
 
-  // PWA 서비스 워커 등록은 지도 문제 해결 후 다시 켠다.
-  // (index.html에서 기존 워커를 해제하고 있으므로 여기서 등록하면 안 된다)
+  // ── PWA ────────────────────────────────────────────────────
+  // HTML은 네트워크 우선, CSS/JS는 ?v= 로 버전이 붙어 있어
+  // 캐시 때문에 수정이 묻히는 일은 생기지 않는다. (sw.js 주석 참고)
+  if ('serviceWorker' in navigator && location.search.indexOf('nosw=1') === -1) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        // 새 워커가 대기 중이면 곧바로 교체한다.
+        reg.addEventListener('updatefound', function () {
+          var sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', function () {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('새 버전이 적용되었습니다.');
+            }
+          });
+        });
+      }).catch(function () {});
+    });
+  }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

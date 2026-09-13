@@ -1,23 +1,32 @@
 /* ART MAP · 서비스 워커
-   - 앱 셸(HTML/CSS/JS/아이콘): 캐시 우선 + 백그라운드 갱신
-   - 데이터(events.json): 네트워크 우선, 실패 시 캐시 (오프라인에서도 마지막 데이터 표시)
-   - 지도 타일/외부 CDN: 캐시하지 않음 (브라우저 기본 캐시에 맡김)          */
+ * ─────────────────────────────────────────────────────────────
+ *  이전 버전에서 CSS/JS를 캐시 우선으로 서빙하는 바람에 코드를 고쳐도
+ *  사용자 화면에 반영되지 않는 사고가 있었다. 재발을 막기 위한 규칙:
+ *
+ *   1. HTML은 항상 네트워크 우선. (오프라인일 때만 캐시)
+ *      → 새 index.html이 즉시 반영되고, 그 안의 ?v= 값이 바뀌면
+ *        CSS/JS도 자동으로 새 URL이 되어 캐시를 우회한다.
+ *   2. CSS/JS는 index.html에서 ?v=N 을 붙여 참조한다.
+ *      URL 자체가 버전이므로 캐시 우선이어도 안전하다.
+ *   3. 데이터(data/*.json)는 네트워크 우선.
+ *   4. ?nosw=1 로 접속하면 워커와 캐시를 전부 삭제한다. (비상 탈출구)
+ * ───────────────────────────────────────────────────────────── */
 
-var VERSION = 'art-map-v2';
-var SHELL = [
-  './',
-  './index.html',
-  './assets/style.css',
-  './assets/app.js',
-  './assets/icon.svg',
-  './manifest.webmanifest',
-];
+var VERSION = 'art-map-v3';
+
+// 정적 자원은 런타임에 캐시한다. 여기엔 버전이 바뀌지 않는 것만 넣는다.
+var PRECACHE = ['./', './index.html', './manifest.webmanifest', './assets/icon.svg'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
-    caches.open(VERSION).then(function (c) { return c.addAll(SHELL); }).then(function () {
-      return self.skipWaiting();
-    })
+    caches.open(VERSION)
+      .then(function (c) {
+        // 하나라도 실패하면 설치 전체가 실패하므로 개별적으로 처리한다.
+        return Promise.all(PRECACHE.map(function (u) {
+          return c.add(u).catch(function () { /* 무시 */ });
+        }));
+      })
+      .then(function () { return self.skipWaiting(); })
   );
 });
 
@@ -25,60 +34,55 @@ self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys()
       .then(function (keys) {
-        return Promise.all(keys.filter(function (k) { return k !== VERSION; }).map(function (k) { return caches.delete(k); }));
+        return Promise.all(keys.map(function (k) {
+          return k === VERSION ? null : caches.delete(k);
+        }));
       })
       .then(function () { return self.clients.claim(); })
   );
 });
 
+/** 응답을 캐시에 복사 (실패해도 무시) */
+function put(req, res) {
+  if (!res || !res.ok || res.type === 'opaque') return res;
+  var clone = res.clone();
+  caches.open(VERSION).then(function (c) { c.put(req, clone); }).catch(function () {});
+  return res;
+}
+
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
 
-  var url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // 네이버 지도 등 외부 리소스는 통과
+  var url;
+  try { url = new URL(req.url); } catch (err) { return; }
 
-  // HTML 문서: 네트워크 우선.
-  // 캐시 우선으로 두면 앱을 고쳐도 사용자에게 한 박자 늦게 반영되어
-  // "고쳤는데 왜 그대로냐"는 혼란이 생긴다. 오프라인일 때만 캐시를 쓴다.
-  if (req.mode === 'navigate' || (req.headers.get('accept') || '').indexOf('text/html') !== -1) {
+  // 외부 리소스(네이버 지도 타일, 문화포털 썸네일 등)는 건드리지 않는다.
+  if (url.origin !== self.location.origin) return;
+
+  var isHTML = req.mode === 'navigate' ||
+               (req.headers.get('accept') || '').indexOf('text/html') !== -1;
+  var isData = url.pathname.indexOf('/data/') !== -1;
+
+  // HTML · 데이터 → 네트워크 우선
+  if (isHTML || isData) {
     e.respondWith(
       fetch(req)
-        .then(function (res) {
-          var clone = res.clone();
-          caches.open(VERSION).then(function (c) { c.put(req, clone); });
-          return res;
+        .then(function (res) { return put(req, res); })
+        .catch(function () {
+          return caches.match(req).then(function (r) {
+            return r || (isHTML ? caches.match('./index.html') : undefined);
+          });
         })
-        .catch(function () { return caches.match(req).then(function (r) { return r || caches.match('./index.html'); }); })
     );
     return;
   }
 
-  // 데이터: 네트워크 우선
-  if (url.pathname.indexOf('/data/') !== -1) {
-    e.respondWith(
-      fetch(req)
-        .then(function (res) {
-          var clone = res.clone();
-          caches.open(VERSION).then(function (c) { c.put(req, clone); });
-          return res;
-        })
-        .catch(function () { return caches.match(req); })
-    );
-    return;
-  }
-
-  // 앱 셸: 캐시 우선 + 백그라운드 갱신
+  // 그 외 정적 자원 → 캐시 우선 (URL에 ?v= 가 붙어 있어 안전)
   e.respondWith(
     caches.match(req).then(function (cached) {
-      var network = fetch(req)
-        .then(function (res) {
-          var clone = res.clone();
-          caches.open(VERSION).then(function (c) { c.put(req, clone); });
-          return res;
-        })
-        .catch(function () { return cached; });
-      return cached || network;
+      if (cached) return cached;
+      return fetch(req).then(function (res) { return put(req, res); });
     })
   );
 });
