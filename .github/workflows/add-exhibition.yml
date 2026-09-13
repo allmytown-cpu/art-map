@@ -1,0 +1,126 @@
+name: 전시 추가 (링크)
+
+# 전시 페이지 URL을 입력하면 정보를 추출해 지도에 핀을 추가한다.
+#
+# 실행 방법
+#   GitHub 저장소 → Actions → "전시 추가 (링크)" → Run workflow
+#   → url 칸에 전시 페이지 주소를 붙여넣고 실행
+#
+# 잘 되는 사이트: art-map.co.kr (전용 어댑터)
+# 그 외 사이트는 JSON-LD / OpenGraph 로 시도하며 실패할 수 있다.
+# 실패하거나 값이 틀리면 아래 선택 입력란으로 직접 지정하면 된다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: '전시 페이지 URL (필수)'
+        required: true
+        type: string
+      dry_run:
+        description: '미리보기만 (저장하지 않음)'
+        type: boolean
+        default: false
+      title:
+        description: '제목 직접 지정 (비우면 자동 추출)'
+        type: string
+      place:
+        description: '장소명 직접 지정'
+        type: string
+      address:
+        description: '주소 직접 지정 (좌표를 못 찾을 때 유용)'
+        type: string
+      start:
+        description: '시작일 YYYY-MM-DD'
+        type: string
+      end:
+        description: '종료일 YYYY-MM-DD'
+        type: string
+      category:
+        description: '분야'
+        type: choice
+        default: exhibition
+        options: [exhibition, performance, festival, education, etc]
+      lat:
+        description: '위도 직접 지정 (예 37.5758)'
+        type: string
+      lng:
+        description: '경도 직접 지정 (예 126.9768)'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: art-map-data
+  cancel-in-progress: false
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci || npm install
+
+      - name: 전시 정보 추출 및 추가
+        id: add
+        env:
+          NCP_APIGW_KEY_ID: ${{ secrets.NCP_APIGW_KEY_ID }}
+          NCP_APIGW_KEY: ${{ secrets.NCP_APIGW_KEY }}
+        run: |
+          ARGS=("${{ inputs.url }}")
+          [ -n "${{ inputs.title }}" ]    && ARGS+=(--title    "${{ inputs.title }}")
+          [ -n "${{ inputs.place }}" ]    && ARGS+=(--place    "${{ inputs.place }}")
+          [ -n "${{ inputs.address }}" ]  && ARGS+=(--address  "${{ inputs.address }}")
+          [ -n "${{ inputs.start }}" ]    && ARGS+=(--start    "${{ inputs.start }}")
+          [ -n "${{ inputs.end }}" ]      && ARGS+=(--end      "${{ inputs.end }}")
+          [ -n "${{ inputs.lat }}" ]      && ARGS+=(--lat      "${{ inputs.lat }}")
+          [ -n "${{ inputs.lng }}" ]      && ARGS+=(--lng      "${{ inputs.lng }}")
+          ARGS+=(--category "${{ inputs.category }}")
+          [ "${{ inputs.dry_run }}" = "true" ] && ARGS+=(--dry)
+
+          set +e
+          node scripts/import-link.mjs "${ARGS[@]}" 2>&1 | tee /tmp/out.txt
+          CODE=${PIPESTATUS[0]}
+          set -e
+
+          {
+            echo "### 전시 추가 결과"
+            echo ''
+            echo '```'
+            cat /tmp/out.txt
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+          # 종료코드 2 = 추출은 됐지만 확인이 필요한 항목이 있음 (실패로 보지 않음)
+          if [ "$CODE" -eq 1 ]; then exit 1; fi
+
+      - name: events.json 재생성
+        if: ${{ inputs.dry_run != true }}
+        run: node scripts/build-events.mjs
+
+      - name: 커밋
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "변경사항 없음"
+          else
+            TITLE=$(node -e "
+              const l=require('./data/sources/manual.json');
+              console.log((l[l.length-1]||{}).title||'전시');
+            ")
+            git commit -m "feat(data): 전시 추가 - ${TITLE}"
+            git pull --rebase origin main || true
+            git push
+          fi

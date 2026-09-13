@@ -397,9 +397,16 @@
       : 'https://map.naver.com/p/search/' + encodeURIComponent((ev.place || '') + ' ' + ev.title);
 
     var geoNote = '';
-    if (ev.geo === 'geocode') geoNote = '※ 원본에 좌표가 없어 주소로 추정한 위치입니다.';
-    else if (ev.geo === 'sibling') geoNote = '※ 같은 장소의 다른 행사 좌표를 사용한 위치입니다.';
-    else if (ev.lat === null) geoNote = '※ 원본에 위치정보가 없어 지도에 표시되지 않습니다.';
+    if (ev.geo === 'naver' || ev.geo === 'osm' || ev.geo === 'cache' || ev.geo === 'geocode') {
+      geoNote = '※ 원본에 좌표가 없어 주소로 추정한 위치입니다.';
+    } else if (ev.geo === 'sibling' || (ev.geo || '').indexOf('gazetteer') === 0) {
+      geoNote = '※ 같은 장소의 다른 행사 좌표를 사용한 위치입니다.';
+    } else if (ev.lat === null) {
+      geoNote = '※ 원본에 위치정보가 없어 지도에 표시되지 않습니다.';
+    }
+    if (ev.source === 'manual') {
+      geoNote = '※ 직접 등록한 전시입니다.' + (geoNote ? '<br />' + geoNote : '');
+    }
 
     el.detailBody.innerHTML =
       (ev.thumbnail ? '<img class="d-hero" src="' + esc(ev.thumbnail) + '" alt="" onerror="this.remove()" />' : '') +

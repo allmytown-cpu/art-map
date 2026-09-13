@@ -7,7 +7,9 @@
   "scripts": {
     "fetch": "node scripts/fetch-events.mjs",
     "geocode": "node scripts/geocode.mjs",
-    "build:data": "node scripts/fetch-events.mjs && node scripts/geocode.mjs",
+    "build": "node scripts/build-events.mjs",
+    "build:data": "node scripts/fetch-events.mjs && node scripts/geocode.mjs && node scripts/build-events.mjs",
+    "add": "node scripts/import-link.mjs",
     "serve": "node scripts/serve.mjs"
   },
   "dependencies": {

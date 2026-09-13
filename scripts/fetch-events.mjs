@@ -321,29 +321,37 @@ async function main() {
     byRealm[e.realm || '(빈값)'] = (byRealm[e.realm || '(빈값)'] || 0) + 1;
   }
 
-  await fs.mkdir(path.dirname(PATHS.events), { recursive: true });
-  await fs.writeFile(PATHS.events, JSON.stringify(events), 'utf8');
+  // 이 스크립트는 '소스 하나'만 담당한다.
+  // 프론트엔드가 읽는 data/events.json 은 build-events.mjs 가 만든다.
+  for (const e of events) e.source = 'kcisa';
+
+  await fs.mkdir(path.dirname(PATHS.kcisa), { recursive: true });
+  await fs.writeFile(PATHS.kcisa, JSON.stringify(events), 'utf8');
   await fs.writeFile(PATHS.detailCache, JSON.stringify(detailCache), 'utf8');
+
+  const prevMeta = await readJson(PATHS.meta, {});
   await fs.writeFile(PATHS.meta, JSON.stringify({
-    updatedAt: new Date().toISOString(),
-    source: '공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스',
-    sourceUrl: 'https://www.data.go.kr/data/15138937/openapi.do',
-    endpoint: `${API_BASE}/${OP_LIST}`,
-    range: { from, to, basis: 'endDate' },
-    total: events.length,
-    withCoord,
-    byCategory,
-    byRealm,
+    ...prevMeta,
+    kcisa: {
+      fetchedAt: new Date().toISOString(),
+      source: '공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스',
+      sourceUrl: 'https://www.data.go.kr/data/15138937/openapi.do',
+      endpoint: `${API_BASE}/${OP_LIST}`,
+      range: { from, to, basis: 'endDate' },
+      total: events.length,
+      withCoord,
+      byRealm,
+    },
   }, null, 2), 'utf8');
 
-  const kb = ((await fs.stat(PATHS.events)).size / 1024).toFixed(0);
-  console.log(`  events.json  ${events.length}건 / ${kb} KB`);
+  const kb = ((await fs.stat(PATHS.kcisa)).size / 1024).toFixed(0);
+  console.log(`  ${PATHS.kcisa}  ${events.length}건 / ${kb} KB`);
   console.log(`  좌표 보유    ${withCoord}건 (${((withCoord / Math.max(events.length, 1)) * 100).toFixed(1)}%)`);
   console.log(`  분야별       ${Object.entries(byCategory).map(([k, v]) => `${k}=${v}`).join('  ')}`);
   if (rateLimitRemaining !== null) {
     console.log(`  API 잔여량   ${rateLimitRemaining.toLocaleString()}회 (일일 한도 10,000회)`);
   }
-  console.log('\n✔ 완료');
+  console.log('\n✔ 완료 (events.json 생성은 build-events.mjs 가 담당)');
 }
 
 main().catch((e) => { console.error('\n[실패]', e.message); process.exit(1); });

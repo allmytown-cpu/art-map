@@ -103,8 +103,13 @@ export function httpsify(u) {
 }
 
 export const PATHS = {
+  // 소스별 원본 (수집 단계 산출물)
+  kcisa: 'data/sources/kcisa.json',
+  manual: 'data/sources/manual.json',
+  // 병합 결과 (프론트엔드가 읽는 파일)
   events: 'data/events.json',
   meta: 'data/meta.json',
+  // 캐시
   geocodeCache: 'data/geocode-cache.json',
   detailCache: 'data/detail-cache.json',
 };

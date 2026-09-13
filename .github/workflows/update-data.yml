@@ -56,10 +56,12 @@ jobs:
         env:
           NCP_APIGW_KEY_ID: ${{ secrets.NCP_APIGW_KEY_ID }}
           NCP_APIGW_KEY: ${{ secrets.NCP_APIGW_KEY }}
-          NOMINATIM_LIMIT: '200'
         # 지오코딩은 부가 기능이라 실패해도 배포를 막지 않는다.
         continue-on-error: true
         run: node scripts/geocode.mjs
+
+      - name: events.json 생성 (소스 병합)
+        run: node scripts/build-events.mjs
 
       - name: 결과 요약
         run: |
@@ -73,7 +75,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/events.json data/meta.json data/geocode-cache.json data/detail-cache.json
+          git add data/
           if git diff --staged --quiet; then
             echo "변경사항 없음 — 커밋 생략"
           else

@@ -1,187 +1,74 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────
-//  ART MAP · 2단계: 좌표 없는 행사 보정 → data/events.json 갱신
+//  ART MAP · 좌표 보정
 //
-//  period2가 내려주는 gpsX/gpsY는 비어 있는 레코드가 꽤 많다.
-//  주소(placeAddr) 또는 장소명(place)으로 좌표를 찾아 채워 넣는다.
+//  data/sources/kcisa.json 중 좌표가 없는 항목의 위치를 찾는다.
 //
-//  지오코더 우선순위
-//    1) 네이버 클라우드 플랫폼 Geocoding  (NCP_APIGW_KEY_ID / NCP_APIGW_KEY 필요)
-//    2) OpenStreetMap Nominatim           (키 불필요, 초당 1회 제한)
+//  ※ 실측 결과, 좌표가 없는 항목의 대부분은 주소도 장소명도 비어 있고
+//    시도명만 있는 상설 프로그램이라 지오코딩으로도 찾을 수 없다.
+//    (전시는 거의 전부 원본에 좌표가 있어 이 단계의 영향이 작다)
 //
-//  한 번 찾은 좌표는 data/geocode-cache.json에 저장해 재사용한다.
+//  실행:  node scripts/geocode.mjs
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs/promises';
-import dns from 'node:dns';
-import { isValidKoreaCoord, PATHS } from './config.mjs';
+import {
+  resolveCoords, buildGazetteer, loadCache, saveCache, buildQueries, HAS_NCP,
+} from './lib/geocode.mjs';
+import { PATHS } from './config.mjs';
 
-dns.setDefaultResultOrder('ipv4first');
+const BUDGET = Number(process.env.GEOCODE_BUDGET || (HAS_NCP ? 2000 : 200));
 
-const NCP_ID = process.env.NCP_APIGW_KEY_ID || '';
-const NCP_KEY = process.env.NCP_APIGW_KEY || '';
-const USE_NCP = Boolean(NCP_ID && NCP_KEY);
+const readJson = async (f, d) => { try { return JSON.parse(await fs.readFile(f, 'utf8')); } catch { return d; } };
 
-// Nominatim은 공용 서비스라 과도하게 쓰면 차단된다. 1회 실행당 상한을 둔다.
-const NOMINATIM_LIMIT = Number(process.env.NOMINATIM_LIMIT || 250);
-const NOMINATIM_DELAY_MS = 1100;
-const NCP_DELAY_MS = 60;
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const round6 = (n) => Math.round(n * 1e6) / 1e6;
-
-async function readJson(file, fallback) {
-  try { return JSON.parse(await fs.readFile(file, 'utf8')); }
-  catch { return fallback; }
+const events = await readJson(PATHS.kcisa, null);
+if (!Array.isArray(events)) {
+  console.error(`[오류] ${PATHS.kcisa} 가 없습니다. 먼저 npm run fetch 를 실행하세요.`);
+  process.exit(1);
 }
 
-/** 지오코딩 질의어 후보를 정확도 높은 순서대로 생성 */
-function buildQueries(ev) {
-  const out = [];
-  const addr = (ev.address || '').trim();
-  const place = (ev.place || '').trim();
-  const area = (ev.area || '').trim();
-  const sigungu = (ev.sigungu || '').trim();
+const manual = await readJson(PATHS.manual, []);
+await loadCache();
+buildGazetteer([...events, ...manual]);   // 좌표가 있는 항목들로 장소 색인 구성
 
-  if (addr) {
-    // "서울특별시 동대문구 왕산로 517 서울문화재단 본관" 처럼 뒤에 건물명이 붙어 있으면
-    // 지오코더가 실패하는 경우가 많아, 원문 → 층/호 제거 → 도로명+번지 순으로 시도한다.
-    out.push(addr);
-    const noUnit = addr.replace(/\s*(지하\s*)?\d+층\s*$|\s*[\w\d-]+호\s*$/gi, '').trim();
-    if (noUnit && noUnit !== addr) out.push(noUnit);
-    const roadOnly = addr.match(/^(.*?(?:로|길)\s*\d+(?:-\d+)?)/);
-    if (roadOnly && roadOnly[1] !== addr) out.push(roadOnly[1].trim());
+const targets = events.filter((e) => e.lat == null);
+const budget = { left: BUDGET };
+
+console.log('━'.repeat(62));
+console.log('ART MAP · 좌표 보정');
+console.log(`  지오코더: ${HAS_NCP ? '네이버 클라우드 Geocoding' : 'OpenStreetMap Nominatim'}`);
+console.log(`  대상 ${targets.length}건 / 전체 ${events.length}건 · 호출 상한 ${BUDGET}회`);
+console.log('━'.repeat(62));
+
+let ok = 0, skipped = 0, failed = 0;
+const viaCount = {};
+
+for (let i = 0; i < targets.length; i++) {
+  const ev = targets[i];
+
+  // 질의어를 만들 수 없는 항목(주소·장소명 모두 없음)은 호출 자체를 아낀다
+  if (buildQueries(ev).length === 0) { skipped++; continue; }
+
+  const hit = await resolveCoords(ev, { budget });
+  if (hit) {
+    ev.lat = hit.lat; ev.lng = hit.lng; ev.geo = hit.via;
+    viaCount[hit.via] = (viaCount[hit.via] || 0) + 1;
+    ok++;
+  } else {
+    failed++;
   }
 
-  // 주소가 없으면 지역 + 장소명으로라도 찍는다 (정확도는 떨어짐)
-  if (place) {
-    const region = [area, sigungu].filter(Boolean).join(' ');
-    if (region && !place.includes(sigungu)) out.push(`${region} ${place}`);
-    out.push(place);
+  if ((i + 1) % 25 === 0 || i + 1 === targets.length) {
+    process.stdout.write(`\r  진행 ${i + 1}/${targets.length} · 성공 ${ok} · 실패 ${failed} · 질의불가 ${skipped}   `);
   }
-
-  return [...new Set(out.filter((q) => q.length >= 3))];
 }
+process.stdout.write('\n');
 
-async function geocodeNcp(query) {
-  const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: {
-      'X-NCP-APIGW-API-KEY-ID': NCP_ID,
-      'X-NCP-APIGW-API-KEY': NCP_KEY,
-      Accept: 'application/json',
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      throw new Error(`NCP 인증 실패(${res.status}) — Geocoding 서비스가 활성화된 키인지 확인하세요.`);
-    }
-    return null;
-  }
-  const json = await res.json();
-  const a = json?.addresses?.[0];
-  if (!a) return null;
-  const lat = parseFloat(a.y), lng = parseFloat(a.x);
-  return isValidKoreaCoord(lat, lng) ? { lat, lng } : null;
-}
+await saveCache();
+await fs.writeFile(PATHS.kcisa, JSON.stringify(events), 'utf8');
 
-async function geocodeNominatim(query) {
-  const url =
-    'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&q=' +
-    encodeURIComponent(query);
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'art-map/1.0 (https://github.com/allmytown-cpu/art-map)',
-      'Accept-Language': 'ko',
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) return null;
-  const json = await res.json();
-  const a = json?.[0];
-  if (!a) return null;
-  const lat = parseFloat(a.lat), lng = parseFloat(a.lon);
-  return isValidKoreaCoord(lat, lng) ? { lat, lng } : null;
-}
-
-async function main() {
-  const events = await readJson(PATHS.events, null);
-  if (!Array.isArray(events)) {
-    console.error(`[오류] ${PATHS.events} 를 먼저 생성하세요 (npm run fetch).`);
-    process.exit(1);
-  }
-  const cache = await readJson(PATHS.geocodeCache, {});
-
-  const targets = events.filter((e) => e.lat === null || e.lng === null);
-  console.log('━'.repeat(60));
-  console.log('ART MAP · 좌표 보정(지오코딩)');
-  console.log(`지오코더: ${USE_NCP ? '네이버 클라우드 Geocoding' : 'OpenStreetMap Nominatim'}`);
-  console.log(`대상: ${targets.length}건 / 전체 ${events.length}건, 캐시 ${Object.keys(cache).length}건`);
-  console.log('━'.repeat(60));
-
-  let fromCache = 0, resolved = 0, failed = 0, apiCalls = 0;
-  let quotaLeft = USE_NCP ? Infinity : NOMINATIM_LIMIT;
-
-  for (const ev of targets) {
-    const queries = buildQueries(ev);
-    if (queries.length === 0) { failed++; continue; }
-
-    let hit = null;
-    let cacheHit = false;
-
-    for (const q of queries) {
-      if (Object.prototype.hasOwnProperty.call(cache, q)) {
-        if (cache[q]) { hit = cache[q]; cacheHit = true; }
-        continue; // null 캐시 = 이전에 실패한 질의, 다음 후보로
-      }
-      if (quotaLeft <= 0) break;
-
-      try {
-        const found = USE_NCP ? await geocodeNcp(q) : await geocodeNominatim(q);
-        apiCalls++; quotaLeft--;
-        await sleep(USE_NCP ? NCP_DELAY_MS : NOMINATIM_DELAY_MS);
-        cache[q] = found ? { lat: round6(found.lat), lng: round6(found.lng) } : null;
-        if (found) { hit = cache[q]; break; }
-      } catch (e) {
-        console.error(`\n  [지오코딩 중단] ${e.message}`);
-        quotaLeft = 0;
-        break;
-      }
-    }
-
-    if (hit) {
-      ev.lat = hit.lat;
-      ev.lng = hit.lng;
-      ev.geo = 'geocode';
-      if (cacheHit) fromCache++; else resolved++;
-    } else {
-      failed++;
-    }
-
-    const done = fromCache + resolved + failed;
-    if (done % 25 === 0) {
-      process.stdout.write(`\r  진행 ${done}/${targets.length}  (신규 ${resolved} · 캐시 ${fromCache} · 실패 ${failed})   `);
-    }
-  }
-  process.stdout.write('\n');
-
-  await fs.writeFile(PATHS.geocodeCache, JSON.stringify(cache, null, 0), 'utf8');
-  await fs.writeFile(PATHS.events, JSON.stringify(events), 'utf8');
-
-  const withCoord = events.filter((e) => e.lat !== null).length;
-  console.log(`\nAPI 호출 ${apiCalls}회 · 캐시 적중 ${fromCache}건 · 신규 ${resolved}건 · 실패 ${failed}건`);
-  console.log(`좌표 보유: ${withCoord}/${events.length} (${((withCoord / events.length) * 100).toFixed(1)}%)`);
-  if (!USE_NCP && quotaLeft <= 0) {
-    console.log('\n※ Nominatim 호출 상한에 도달했습니다. 다음 실행 때 이어서 처리됩니다.');
-    console.log('  빠르게 끝내려면 NCP_APIGW_KEY_ID / NCP_APIGW_KEY 를 설정하세요.');
-  }
-
-  // meta.json 갱신
-  const meta = await readJson(PATHS.meta, {});
-  meta.withCoord = withCoord;
-  meta.geocodedAt = new Date().toISOString();
-  await fs.writeFile(PATHS.meta, JSON.stringify(meta, null, 2), 'utf8');
-  console.log('\n✔ 완료');
-}
-
-main().catch((e) => { console.error('\n[실패]', e); process.exit(1); });
+const withCoord = events.filter((e) => e.lat != null).length;
+console.log(`\n  보정 성공 ${ok}건  ${Object.entries(viaCount).map(([k, v]) => `${k}=${v}`).join(' ') || ''}`);
+console.log(`  질의어 없음 ${skipped}건 (주소·장소명이 모두 비어 지오코딩 불가)`);
+console.log(`  좌표 보유  ${withCoord}/${events.length} (${((withCoord / events.length) * 100).toFixed(1)}%)`);
+if (budget.left <= 0) console.log('\n  ※ 호출 상한에 도달했습니다. 다음 실행 때 이어서 처리됩니다.');
+console.log('\n✔ 완료');
