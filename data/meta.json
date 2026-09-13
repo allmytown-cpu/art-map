@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-13T13:31:18.270Z",
+  "updatedAt": "2026-09-13T13:41:08.720Z",
   "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
   "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
   "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
@@ -28,5 +28,5 @@
     "국악": 32,
     "아동/가족": 5
   },
-  "geocodedAt": "2026-09-13T13:34:22.404Z"
+  "geocodedAt": "2026-09-13T13:41:15.965Z"
 }
