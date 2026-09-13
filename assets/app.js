@@ -512,12 +512,14 @@
     try { center = map.getCenter().lat().toFixed(4) + ', ' + map.getCenter().lng().toFixed(4); }
     catch (e) { center = '읽기 실패: ' + e.message; }
 
-    var mapBg = getComputedStyle(mapEl).backgroundColor;
+    // 네이버 지도가 컨테이너에 인라인 스타일을 덮어쓰므로 배경색으로
+    // 캐시 여부를 판정하면 안 된다. position/size를 그대로 보여준다.
+    var cs = getComputedStyle(mapEl);
 
     var lines = [
-      'build         v3',
+      'build         v4',
       'origin        ' + location.origin,
-      '#map 배경색   ' + mapBg + (mapBg.indexOf('232, 234, 237') !== -1 ? ' (최신 CSS)' : ' (구 CSS 캐시!)'),
+      '#map position ' + cs.position + ' / inline=' + (mapEl.style.position || '없음'),
       'naver.maps    ' + (window.naver && naver.maps ? 'v' + (naver.maps.VERSION || '?') : '없음'),
       'authFailure   ' + (window.__mapAuthFailed ? '발생함' : '발생 안 함'),
       'map 객체      ' + (map ? '생성됨' : '없음'),

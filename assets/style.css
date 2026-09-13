@@ -35,7 +35,19 @@ html, body {
 button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
 a { color: var(--accent); }
 
-#map { position: absolute; inset: 0; }
+/* 네이버 지도는 초기화하면서 컨테이너에 position:relative 등 인라인 스타일을
+   지정한다. 그러면 `inset:0`으로 크기를 잡는 방식이 무력화되어 높이가 0이 되고
+   (타일은 정상 로드되지만) 아무것도 보이지 않는다.
+   그래서 위치 지정 방식과 무관하게 뷰포트 단위로 크기를 못박는다. */
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;   /* 모바일 주소창 높이 변화 대응 */
+  background: #e8eaed;  /* 타일이 안 뜰 때 검은 화면 대신 회색 */
+}
 
 /* ── 상단 바 ─────────────────────────────────────────────── */
 .topbar {
@@ -267,8 +279,6 @@ a { color: var(--accent); }
 }
 
 /* ── 지도 로드 실패 배너 ─────────────────────────────────── */
-#map { background: #e8eaed; }   /* 타일이 안 뜰 때 검은 화면 대신 회색 */
-
 /* display:flex 가 [hidden]의 display:none 보다 우선하므로 명시적으로 눌러준다.
    이걸 빼먹으면 빈 배너가 항상 떠 있게 된다. */
 .map-error[hidden] { display: none !important; }
