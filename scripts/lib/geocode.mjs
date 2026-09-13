@@ -168,11 +168,21 @@ export async function resolveCoords(info, { allowRemote = true, budget = { left:
   if (!allowRemote) return null;
 
   await loadCache();
+  const provider = HAS_NCP ? 'naver' : 'osm';
+
   for (const q of buildQueries(info)) {
-    if (Object.prototype.hasOwnProperty.call(cache, q)) {
-      if (cache[q]) return { ...cache[q], via: 'cache' };
-      continue; // null 캐시 = 이전 실패
+    const c = cache[q];
+
+    // 성공 캐시는 어느 지오코더가 찾았든 그대로 쓴다.
+    if (c && c.lat !== undefined && c.lat !== null) {
+      return { lat: c.lat, lng: c.lng, via: 'cache' };
     }
+
+    // 실패 캐시는 '같은 지오코더가 실패한 경우'에만 건너뛴다.
+    // 정확도가 낮은 Nominatim의 실패 기록 때문에 네이버를 영영 호출하지
+    // 못하는 일이 실제로 있었다. (legacy: null = 지오코더 불명 → 재시도)
+    if (c && c.miss && c.by === provider) continue;
+
     if (budget.left <= 0) return null;
 
     let found = null;
@@ -184,8 +194,12 @@ export async function resolveCoords(info, { allowRemote = true, budget = { left:
       console.error(`  [지오코딩 중단] ${e.message}`);
       return null;
     }
-    cache[q] = found ? { lat: round6(found.lat), lng: round6(found.lng) } : null;
-    if (found) return { ...cache[q], via: HAS_NCP ? 'naver' : 'osm' };
+
+    if (found) {
+      cache[q] = { lat: round6(found.lat), lng: round6(found.lng), by: provider };
+      return { lat: cache[q].lat, lng: cache[q].lng, via: provider };
+    }
+    cache[q] = { miss: true, by: provider };
   }
   return null;
 }

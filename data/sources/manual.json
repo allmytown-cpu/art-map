@@ -1,1 +1,26 @@
-﻿[]
+[
+ {
+  "id": "mf5oj0n",
+  "source": "manual",
+  "sourceUrl": "https://art-map.co.kr/exhibition/view.php?idx=32424&type=top",
+  "adapter": "art-map.co.kr",
+  "title": "<SKETCH 2026 : 유동의 미학>",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2026-08-28",
+  "end": "2026-09-17",
+  "place": "송원아트센터",
+  "area": "서울",
+  "sigungu": "",
+  "address": "서울 종로구 화동 106-5",
+  "lat": 37.579325,
+  "lng": 126.983426,
+  "geo": "naver",
+  "thumbnail": "https://art-map.co.kr/art-map/public//upload/2026/08/exhibition/d5124fcabd356d89fb118a3af6ad0099_FIN2026_KSFC_%EC%9C%A0%EB%8F%99%EC%9D%98_%EB%AF%B8%ED%95%99%ED%82%A4%EB%B9%84%EC%A3%BC%EC%96%BC_%EB%94%94%EC%9E%90%EC%9D%B8_260729.jpg",
+  "price": "무료",
+  "phone": "02-735-9277",
+  "url": "https://www.instagram.com/dreamnext_sketch/",
+  "desc": "참여작가: 장우주 김휘아, 아하콜렉티브, 유아연, 장우주 (4인/팀 그룹전) / 관람시간: 화~일요일 11:00~18:00 매주 월요일 정기휴관 *2026.09.02(수) 휴관 *2026.09.03(목) 1F 관람제한 1) 아티스트 토크 (19:30~20:30) - 모더레이터 : 안현정 큐레이터 2) 미디어 퍼포먼스 (21:00~21:10) - 아하콜렉티브 , 모든컴퍼니 3) 레이브 파티 (20:45~23:00) 2. 도슨트 프로그램 - 토, 일 2회 운영 (13:00/16:00) *소요시간 약 35분 내외 / 휴관: 월요일",
+  "addedAt": "2026-09-13"
+ }
+]
