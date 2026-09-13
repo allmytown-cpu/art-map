@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-13T14:28:26.143Z",
+  "updatedAt": "2026-09-13T14:29:33.993Z",
   "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
   "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
   "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
@@ -9,7 +9,7 @@
     "basis": "endDate"
   },
   "total": 1140,
-  "withCoord": 992,
+  "withCoord": 991,
   "byCategory": {
     "performance": 675,
     "exhibition": 298,
@@ -37,5 +37,30 @@
     "manual": 1,
     "kcisa": 1139
   },
-  "duplicatesMerged": 0
+  "duplicatesMerged": 0,
+  "kcisa": {
+    "fetchedAt": "2026-09-13T14:29:33.792Z",
+    "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
+    "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
+    "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
+    "range": {
+      "from": "20260913",
+      "to": "20301231",
+      "basis": "endDate"
+    },
+    "total": 1139,
+    "withCoord": 976,
+    "byRealm": {
+      "연극": 138,
+      "전시": 297,
+      "뮤지컬/오페라": 97,
+      "교육/체험": 111,
+      "무용/발레": 33,
+      "음악/콘서트": 354,
+      "기타": 16,
+      "행사/축제": 56,
+      "국악": 32,
+      "아동/가족": 5
+    }
+  }
 }
