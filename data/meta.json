@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-13T15:05:50.364Z",
+  "updatedAt": "2026-09-13T15:07:00.577Z",
   "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
   "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
   "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
@@ -35,7 +35,7 @@
     "manual": 2
   },
   "sources": {
-    "manual": 3,
+    "manual": 4,
     "artmap": 29,
     "kcisa": 1139
   },
