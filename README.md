@@ -53,15 +53,17 @@
 
 ### 3. 네이버 지도 도메인 등록
 
-[NCP 콘솔](https://console.ncloud.com) → **Services → AI·NAVER API → Maps → Application**
-→ 사용 중인 애플리케이션의 **Web 서비스 URL**에 아래를 추가:
+[NCP 콘솔](https://console.ncloud.com) → **Services → Maps → Application**
+→ 애플리케이션 `art-map`(Key ID: `ior0d6uleb`)의 **Web 서비스 URL**에 아래가 등록되어 있어야 합니다:
 
 ```
 https://allmytown-cpu.github.io
 http://localhost:5173
 ```
 
-> 현재 코드가 쓰는 키: `index.html`의 `ncpKeyId=ldzn2y3ng1`
+> - 코드에서 쓰는 위치: `index.html`의 `ncpKeyId=ior0d6uleb`
+> - 도메인만 등록합니다. 끝에 `/`나 `/art-map` 같은 경로는 붙이지 마세요.
+> - 인증에 실패하면 화면에 "네이버 지도 인증 실패" 안내가 뜹니다(`navermap_authFailure`).
 
 ### 4. 첫 데이터 수집 실행
 
