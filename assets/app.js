@@ -488,14 +488,15 @@
       if (state.boundsOnly) scheduleFilters();
     });
 
-    setTimeout(checkTiles, 6000);
+    // ?debug=1 을 붙이면 정상이어도 진단 패널을 띄운다.
+    setTimeout(function () { checkTiles(/^\?|&/.test(location.search) && /(\?|&)debug=1/.test(location.search)); }, 5000);
   }
 
   /**
    * 타일이 실제로 그려졌는지 확인하고, 실패했다면 원인 추적에 필요한 상태를
    * 화면에 그대로 노출한다. (콘솔을 못 보는 환경에서도 원인을 알 수 있도록)
    */
-  function checkTiles() {
+  function checkTiles(force) {
     var imgs = document.querySelectorAll('#map img');
     var canvases = document.querySelectorAll('#map canvas');
     var loaded = 0;
@@ -503,7 +504,7 @@
       if (im.complete && im.naturalWidth > 0) loaded++;
     });
 
-    if (!window.__mapAuthFailed && (loaded > 0 || canvases.length > 0)) return; // 정상
+    if (!force && !window.__mapAuthFailed && (loaded > 0 || canvases.length > 0)) return; // 정상
 
     var mapEl = document.getElementById('map');
     var rect = mapEl.getBoundingClientRect();
@@ -511,8 +512,12 @@
     try { center = map.getCenter().lat().toFixed(4) + ', ' + map.getCenter().lng().toFixed(4); }
     catch (e) { center = '읽기 실패: ' + e.message; }
 
+    var mapBg = getComputedStyle(mapEl).backgroundColor;
+
     var lines = [
+      'build         v3',
       'origin        ' + location.origin,
+      '#map 배경색   ' + mapBg + (mapBg.indexOf('232, 234, 237') !== -1 ? ' (최신 CSS)' : ' (구 CSS 캐시!)'),
       'naver.maps    ' + (window.naver && naver.maps ? 'v' + (naver.maps.VERSION || '?') : '없음'),
       'authFailure   ' + (window.__mapAuthFailed ? '발생함' : '발생 안 함'),
       'map 객체      ' + (map ? '생성됨' : '없음'),
@@ -625,12 +630,8 @@
     });
   }
 
-  // PWA
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function () {});
-    });
-  }
+  // PWA 서비스 워커 등록은 지도 문제 해결 후 다시 켠다.
+  // (index.html에서 기존 워커를 해제하고 있으므로 여기서 등록하면 안 된다)
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

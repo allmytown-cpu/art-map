@@ -13,7 +13,29 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="assets/icon.svg" />
-<link rel="stylesheet" href="assets/style.css" />
+<!-- ?v= 는 캐시 무효화용. 정적 자원을 고치면 이 숫자를 올릴 것. -->
+<link rel="stylesheet" href="assets/style.css?v=3" />
+
+<script>
+  // ── 서비스 워커 강제 해제 (디버깅 기간 한정) ───────────────
+  // v1 서비스 워커가 CSS/JS를 캐시 우선으로 돌려주는 바람에 수정이
+  // 사용자에게 반영되지 않았다. 지도 문제가 해결될 때까지 PWA 캐시를
+  // 비활성화하고, 기존에 설치된 워커와 캐시를 모두 지운다.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (rs) {
+      var had = rs.length > 0;
+      rs.forEach(function (r) { r.unregister(); });
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); });
+      }
+      // 워커가 있었다면 그 워커가 응답한 낡은 자원을 쓰고 있으므로 한 번 새로고침
+      if (had && !sessionStorage.getItem('swCleared')) {
+        sessionStorage.setItem('swCleared', '1');
+        location.reload();
+      }
+    });
+  }
+</script>
 
 <script>
   // 네이버 지도 인증 실패 콜백. maps.js 로드 전에 정의되어야 한다.
@@ -98,6 +120,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="assets/app.js"></script>
+  <script src="assets/app.js?v=3"></script>
 </body>
 </html>
