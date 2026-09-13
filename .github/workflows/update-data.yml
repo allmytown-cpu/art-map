@@ -13,10 +13,11 @@ on:
         description: '지오코딩 건너뛰기'
         type: boolean
         default: false
-  push:
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/update-data.yml'
+
+# push 트리거는 두지 않는다.
+# 스크립트를 고칠 때마다 전체 수집(수백 회 API 호출)이 돌고,
+# 봇이 data/ 를 커밋하는 동안 로컬에서 푸시하면 매번 충돌이 났다.
+# 코드 수정 후 즉시 반영이 필요하면 Actions에서 수동 실행할 것.
 
 permissions:
   contents: write
