@@ -488,23 +488,57 @@
       if (state.boundsOnly) scheduleFilters();
     });
 
-    // 타일이 끝내 안 뜨는 경우를 감지한다.
-    // navermap_authFailure가 호출되지 않는 실패(타일 요청만 401 등)도 있어서
-    // 실제로 그려진 타일이 있는지 직접 확인한다.
-    setTimeout(function () {
-      if (window.__mapAuthFailed) return;
-      var tiles = document.querySelectorAll('#map img, #map canvas');
-      if (tiles.length > 0) return;
-      var b = document.getElementById('mapError');
-      if (!b) return;
-      b.innerHTML =
-        '<strong>지도 타일을 불러오지 못했습니다</strong>' +
-        '<span>NCP 콘솔 → Maps → Application → <b>art-map</b> 확인 사항<br />' +
-        '① <b>Web Dynamic Map</b> 서비스가 체크되어 있는가<br />' +
-        '② <b>Web 서비스 URL</b>에 <code>' + location.origin + '</code> 이 등록되어 있는가</span>' +
-        '<span class="dim">Key ID: ior0d6uleb · 목록과 거리 정렬은 정상 동작합니다.</span>';
-      b.hidden = false;
-    }, 6000);
+    setTimeout(checkTiles, 6000);
+  }
+
+  /**
+   * 타일이 실제로 그려졌는지 확인하고, 실패했다면 원인 추적에 필요한 상태를
+   * 화면에 그대로 노출한다. (콘솔을 못 보는 환경에서도 원인을 알 수 있도록)
+   */
+  function checkTiles() {
+    var imgs = document.querySelectorAll('#map img');
+    var canvases = document.querySelectorAll('#map canvas');
+    var loaded = 0;
+    Array.prototype.forEach.call(imgs, function (im) {
+      if (im.complete && im.naturalWidth > 0) loaded++;
+    });
+
+    if (!window.__mapAuthFailed && (loaded > 0 || canvases.length > 0)) return; // 정상
+
+    var mapEl = document.getElementById('map');
+    var rect = mapEl.getBoundingClientRect();
+    var center = null;
+    try { center = map.getCenter().lat().toFixed(4) + ', ' + map.getCenter().lng().toFixed(4); }
+    catch (e) { center = '읽기 실패: ' + e.message; }
+
+    var lines = [
+      'origin        ' + location.origin,
+      'naver.maps    ' + (window.naver && naver.maps ? 'v' + (naver.maps.VERSION || '?') : '없음'),
+      'authFailure   ' + (window.__mapAuthFailed ? '발생함' : '발생 안 함'),
+      'map 객체      ' + (map ? '생성됨' : '없음'),
+      'map 중심      ' + center,
+      'map 크기      ' + Math.round(rect.width) + ' x ' + Math.round(rect.height),
+      'map 자식요소  ' + mapEl.children.length + '개',
+      'tile <img>    ' + imgs.length + '개 (로드 성공 ' + loaded + '개)',
+      '<canvas>      ' + canvases.length + '개',
+      '스크립트오류  ' + (window.__jsErrors && window.__jsErrors.length
+                        ? window.__jsErrors.slice(0, 2).join(' | ') : '없음'),
+    ];
+
+    var b = document.getElementById('mapError');
+    b.innerHTML =
+      '<strong>지도 타일이 표시되지 않습니다</strong>' +
+      '<span>목록·검색·거리 정렬은 정상 동작합니다. 아래 진단 정보를 개발자에게 전달하세요.</span>' +
+      '<div class="diag">' + esc(lines.join('\n')) + '</div>' +
+      '<button type="button" id="diagCopy">진단 정보 복사</button>' +
+      '<span class="dim">Key ID: ior0d6uleb</span>';
+    b.hidden = false;
+
+    document.getElementById('diagCopy').addEventListener('click', function () {
+      var txt = lines.join('\n');
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('복사했습니다.'); });
+      else toast('복사를 지원하지 않는 브라우저입니다.');
+    });
   }
 
   function bindUI() {

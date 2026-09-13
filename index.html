@@ -19,6 +19,13 @@
   // 네이버 지도 인증 실패 콜백. maps.js 로드 전에 정의되어야 한다.
   // 인증 실패는 지도 생성 후 비동기로 발생하므로, 부팅 오버레이가 이미 사라진
   // 뒤일 수 있다. 따라서 오버레이와 무관한 별도 배너로 띄운다.
+  // 진단용: 페이지에서 발생한 스크립트 오류를 모아둔다.
+  window.__jsErrors = [];
+  window.addEventListener('error', function (e) {
+    var m = e.message || (e.target && e.target.src ? '리소스 로드 실패: ' + e.target.src : '알 수 없음');
+    if (window.__jsErrors.length < 10) window.__jsErrors.push(String(m).slice(0, 160));
+  }, true);
+
   window.__mapAuthFailed = false;
   window.navermap_authFailure = function () {
     window.__mapAuthFailed = true;

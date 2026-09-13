@@ -269,15 +269,29 @@ a { color: var(--accent); }
 /* ── 지도 로드 실패 배너 ─────────────────────────────────── */
 #map { background: #e8eaed; }   /* 타일이 안 뜰 때 검은 화면 대신 회색 */
 
+/* display:flex 가 [hidden]의 display:none 보다 우선하므로 명시적으로 눌러준다.
+   이걸 빼먹으면 빈 배너가 항상 떠 있게 된다. */
+.map-error[hidden] { display: none !important; }
+
 .map-error {
   position: absolute; z-index: 12;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: min(420px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 140px); overflow-y: auto;
   background: #fff; border-radius: var(--radius);
   box-shadow: var(--shadow); border: 1px solid #f1c5c5;
-  padding: 18px 20px; text-align: center;
+  padding: 18px 20px; text-align: left;
   display: flex; flex-direction: column; gap: 8px;
   font-size: 13px; line-height: 1.6;
+}
+.map-error .diag {
+  background: var(--surface-2); border-radius: 8px; padding: 10px 12px;
+  font-family: ui-monospace, Consolas, monospace; font-size: 11.5px;
+  line-height: 1.7; color: #37474f; white-space: pre-wrap; word-break: break-all;
+}
+.map-error button {
+  margin-top: 4px; padding: 9px; border-radius: 8px;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
 }
 .map-error strong { color: #c62828; font-size: 15px; }
 .map-error code {
