@@ -10,7 +10,11 @@
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import dns from 'node:dns';
 import { XMLParser } from 'fast-xml-parser';
+
+// apis.data.go.kr 은 AAAA 레코드가 없다. IPv6를 먼저 시도하다 실패하는 경우를 막는다.
+dns.setDefaultResultOrder('ipv4first');
 import {
   API_BASE, OP_LIST, OP_DETAIL, PAGE_SIZE, PAGE_PARAM, YEARS_AHEAD,
   MAX_PAGES, REQUEST_DELAY_MS, MAX_RETRY, DETAIL_BUDGET,
@@ -35,11 +39,21 @@ const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0'
 const round6 = (n) => Math.round(n * 1e6) / 1e6;
 
 // ── HTTP ─────────────────────────────────────────────────────
+/** 재시도해도 소용없는(=설정이 잘못된) 오류인지 판정 */
+const isFatal = (msg) => /존재하지 않습니다|등록되지 않은|한도를 초과/.test(msg);
+
+let rateLimitRemaining = null;
+
 async function apiGet(operation, params, attempt = 1) {
   const qs = Object.entries(params).map(([k, v]) => `${k}=${v}`).join('&');
   const url = `${API_BASE}/${operation}?serviceKey=${KEY}&${qs}`;
   try {
-    const res = await fetch(url, { headers: { Accept: 'application/xml' }, signal: AbortSignal.timeout(30000) });
+    const res = await fetch(url, {
+      headers: { Accept: 'application/xml' },
+      signal: AbortSignal.timeout(45000),
+    });
+    const rem = res.headers.get('x-ratelimit-remaining');
+    if (rem !== null) rateLimitRemaining = Number(rem);
     const text = await res.text();
 
     if (/NO_OPENAPI_SERVICE_ERROR/.test(text)) {
@@ -60,11 +74,18 @@ async function apiGet(operation, params, attempt = 1) {
     }
     return tree?.response?.body || {};
   } catch (e) {
-    if (attempt < MAX_RETRY && !/존재하지 않습니다|등록되지 않은|한도를 초과/.test(e.message)) {
-      await sleep(700 * attempt);
+    // undici의 'fetch failed'는 원인이 e.cause에 들어있어 그대로 두면 디버깅이 불가능하다.
+    const detail = e.cause ? ` (${e.cause.code || e.cause.message})` : '';
+    const msg = e.message + detail;
+
+    if (attempt < MAX_RETRY && !isFatal(e.message)) {
+      // 지수 백오프 + 지터. 공공데이터포털은 순간적으로 연결을 끊는 일이 잦다.
+      const wait = Math.min(1000 * 2 ** (attempt - 1), 15000) + Math.random() * 500;
+      console.warn(`\n  ! ${operation} 요청 실패 (${attempt}/${MAX_RETRY}): ${msg} → ${(wait / 1000).toFixed(1)}초 후 재시도`);
+      await sleep(wait);
       return apiGet(operation, params, attempt + 1);
     }
-    throw e;
+    throw new Error(msg);
   }
 }
 
@@ -319,6 +340,9 @@ async function main() {
   console.log(`  events.json  ${events.length}건 / ${kb} KB`);
   console.log(`  좌표 보유    ${withCoord}건 (${((withCoord / Math.max(events.length, 1)) * 100).toFixed(1)}%)`);
   console.log(`  분야별       ${Object.entries(byCategory).map(([k, v]) => `${k}=${v}`).join('  ')}`);
+  if (rateLimitRemaining !== null) {
+    console.log(`  API 잔여량   ${rateLimitRemaining.toLocaleString()}회 (일일 한도 10,000회)`);
+  }
   console.log('\n✔ 완료');
 }
 

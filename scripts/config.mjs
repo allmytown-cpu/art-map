@@ -24,7 +24,9 @@ export const YEARS_AHEAD = 4;
 
 export const MAX_PAGES = 3000;      // 안전장치 (무한루프 방지)
 export const REQUEST_DELAY_MS = 90; // 요청 간 간격
-export const MAX_RETRY = 3;
+// 공공데이터포털은 간헐적으로 연결을 끊는다(undici 'fetch failed').
+// 수백 번 요청하는 동안 한 번만 실패해도 전체가 중단되므로 재시도를 넉넉히 둔다.
+export const MAX_RETRY = 6;
 
 // 상세정보 보강: 1건당 1요청이라 실행당 상한을 둔다.
 // 결과는 data/detail-cache.json에 캐시되어 다음 실행 때 재사용된다.

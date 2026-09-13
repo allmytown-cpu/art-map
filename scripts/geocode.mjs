@@ -12,7 +12,10 @@
 //  한 번 찾은 좌표는 data/geocode-cache.json에 저장해 재사용한다.
 // ─────────────────────────────────────────────────────────────
 import fs from 'node:fs/promises';
+import dns from 'node:dns';
 import { isValidKoreaCoord, PATHS } from './config.mjs';
+
+dns.setDefaultResultOrder('ipv4first');
 
 const NCP_ID = process.env.NCP_APIGW_KEY_ID || '';
 const NCP_KEY = process.env.NCP_APIGW_KEY || '';
