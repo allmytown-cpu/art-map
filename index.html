@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>ART MAP · 내 주변 전시·공연 지도</title>
+<meta name="description" content="공공데이터 기반 전국 전시·공연·문화행사 지도. 내 위치에서 가까운 순으로 찾아보세요." />
+<meta name="theme-color" content="#111418" />
+<meta property="og:title" content="ART MAP · 내 주변 전시·공연 지도" />
+<meta property="og:description" content="지금 내 주변에서 열리는 전시와 공연을 지도에서 찾아보세요." />
+<meta property="og:type" content="website" />
+
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon.svg" />
+<link rel="stylesheet" href="assets/style.css" />
+
+<script>
+  // 네이버 지도 인증 실패 시 원인을 화면에 노출 (maps.js 로드 전에 정의되어야 함)
+  window.navermap_authFailure = function () {
+    document.documentElement.classList.add('map-auth-failed');
+    var el = document.getElementById('bootMessage');
+    if (el) {
+      el.innerHTML =
+        '<strong>네이버 지도 인증 실패</strong><br />' +
+        'NCP 콘솔 &gt; Maps &gt; 해당 애플리케이션의 <b>Web 서비스 URL</b>에<br />' +
+        '현재 도메인이 등록되어 있는지 확인하세요.';
+    }
+  };
+</script>
+<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=ldzn2y3ng1"></script>
+<script src="https://cdn.jsdelivr.net/gh/navermaps/marker-tools.js@master/marker-clustering/src/MarkerClustering.js"></script>
+</head>
+
+<body>
+  <div id="map" aria-label="지도"></div>
+
+  <!-- 상단: 검색 + 분야 필터 ------------------------------------- -->
+  <header class="topbar">
+    <div class="searchrow">
+      <span class="brand" aria-hidden="true">🎨</span>
+      <input id="search" type="search" placeholder="전시·공연·장소 검색" autocomplete="off" aria-label="검색" />
+      <button id="btnClearSearch" class="icon-btn" type="button" aria-label="검색어 지우기" hidden>✕</button>
+    </div>
+    <div id="chips" class="chips" role="group" aria-label="분야 필터"></div>
+  </header>
+
+  <!-- 우측 플로팅 버튼 ------------------------------------------- -->
+  <div class="fabs">
+    <button id="btnLocate" class="fab" type="button" aria-label="내 위치로 이동">📍</button>
+    <button id="btnRefresh" class="fab fab-sm" type="button" aria-label="이 지역 다시 검색">🔄</button>
+  </div>
+
+  <!-- 하단 시트: 가까운 순 목록 ---------------------------------- -->
+  <section id="sheet" class="sheet" aria-label="행사 목록">
+    <button id="sheetHandle" class="sheet-handle" type="button" aria-expanded="false">
+      <span class="grip"></span>
+      <span id="sheetTitle" class="sheet-title">불러오는 중…</span>
+    </button>
+    <div id="sheetBody" class="sheet-body">
+      <ul id="list" class="list"></ul>
+      <div id="listEmpty" class="empty" hidden>조건에 맞는 행사가 없습니다.</div>
+      <button id="btnMore" class="more" type="button" hidden>더 보기</button>
+      <p class="credit">
+        출처 · 공공데이터포털
+        <a href="https://www.data.go.kr/data/15138937/openapi.do" target="_blank" rel="noopener">한눈에보는문화정보</a>
+        <span id="updatedAt"></span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 상세 패널 --------------------------------------------------- -->
+  <div id="detail" class="detail" hidden>
+    <button id="detailClose" class="detail-close" type="button" aria-label="닫기">✕</button>
+    <div id="detailBody"></div>
+  </div>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <!-- 부팅/오류 메시지 -------------------------------------------- -->
+  <div id="boot" class="boot">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="bootMessage">문화행사 정보를 불러오는 중…</p>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

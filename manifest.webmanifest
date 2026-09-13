@@ -1,0 +1,16 @@
+{
+  "name": "ART MAP · 내 주변 전시·공연 지도",
+  "short_name": "ART MAP",
+  "description": "공공데이터 기반 전국 전시·공연·문화행사 지도. 내 위치에서 가까운 순으로 찾아보세요.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111418",
+  "theme_color": "#111418",
+  "lang": "ko",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

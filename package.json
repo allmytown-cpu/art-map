@@ -1,0 +1,16 @@
+{
+  "name": "art-map",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "전국 전시·공연·문화행사 지도 (공공데이터포털 한눈에보는문화정보 기반)",
+  "scripts": {
+    "fetch": "node scripts/fetch-events.mjs",
+    "geocode": "node scripts/geocode.mjs",
+    "build:data": "node scripts/fetch-events.mjs && node scripts/geocode.mjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  }
+}

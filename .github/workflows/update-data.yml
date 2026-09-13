@@ -1,0 +1,80 @@
+name: 데이터 갱신
+
+# 공공데이터포털에서 문화행사 정보를 받아 data/events.json 을 갱신하고 커밋한다.
+# GitHub Pages(main 브랜치 root)가 커밋을 감지해 자동으로 재배포된다.
+
+on:
+  schedule:
+    # 매일 06:10 KST (21:10 UTC). GitHub 스케줄러는 수 분 지연될 수 있음.
+    - cron: '10 21 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_geocode:
+        description: '지오코딩 건너뛰기'
+        type: boolean
+        default: false
+  push:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/update-data.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci || npm install
+
+      - name: 공공데이터 수집
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+        run: node scripts/fetch-events.mjs
+
+      - name: 좌표 보정 (지오코딩)
+        if: ${{ inputs.skip_geocode != true }}
+        env:
+          NCP_APIGW_KEY_ID: ${{ secrets.NCP_APIGW_KEY_ID }}
+          NCP_APIGW_KEY: ${{ secrets.NCP_APIGW_KEY }}
+          NOMINATIM_LIMIT: '200'
+        # 지오코딩은 부가 기능이라 실패해도 배포를 막지 않는다.
+        continue-on-error: true
+        run: node scripts/geocode.mjs
+
+      - name: 결과 요약
+        run: |
+          echo "### 데이터 갱신 결과" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat data/meta.json >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 변경사항 커밋
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/events.json data/meta.json data/geocode-cache.json
+          if git diff --staged --quiet; then
+            echo "변경사항 없음 — 커밋 생략"
+          else
+            COUNT=$(node -e "console.log(require('./data/meta.json').total)")
+            git commit -m "chore(data): 문화행사 정보 갱신 (${COUNT}건)"
+            git push
+          fi
