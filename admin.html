@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>ART MAP 관리자 · 전시 추가</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#fff; --text:#1a1d21; --dim:#6b7280;
+    --line:#e3e6ea; --accent:#c2185b; --ok:#2e9e5b; --warn:#f57c00; --err:#c62828;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:20px 16px calc(60px + env(safe-area-inset-bottom));
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic",sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:640px; margin:0 auto}
+  h1{font-size:20px; margin:0 0 4px}
+  h1 a{color:var(--dim); font-size:13px; font-weight:400; text-decoration:none; margin-left:8px}
+  .lead{color:var(--dim); font-size:13px; margin:0 0 20px}
+
+  .card{background:var(--surface); border-radius:14px; padding:18px; margin-bottom:16px;
+        box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .card h2{font-size:14px; margin:0 0 12px; color:var(--dim); font-weight:700}
+
+  label{display:block; font-size:12px; color:var(--dim); margin:12px 0 4px; font-weight:600}
+  label:first-of-type{margin-top:0}
+  input,select,textarea{
+    width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:9px;
+    font-size:16px; font-family:inherit; background:#fff; color:var(--text);
+  }
+  input:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+  .hint{font-size:11.5px; color:var(--dim); margin-top:4px}
+  .row{display:flex; gap:10px}
+  .row>div{flex:1; min-width:0}
+
+  details{margin-top:14px; border-top:1px solid var(--line); padding-top:12px}
+  summary{font-size:13px; color:var(--dim); cursor:pointer; font-weight:600}
+
+  .btns{display:flex; gap:8px; margin-top:18px}
+  button{
+    flex:1; padding:13px; border:0; border-radius:10px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer; background:#eceef1; color:var(--text);
+  }
+  button.primary{background:var(--accent); color:#fff}
+  button:disabled{opacity:.5; cursor:not-allowed}
+
+  .log{
+    background:#1b1f24; color:#dfe3e8; border-radius:10px; padding:14px;
+    font-family:ui-monospace,Consolas,monospace; font-size:12px; line-height:1.7;
+    white-space:pre-wrap; word-break:break-all; max-height:340px; overflow-y:auto;
+    margin-top:14px; display:none;
+  }
+  .log.show{display:block}
+  .log .ok{color:#7ee08a} .log .err{color:#ff8f8f} .log .warn{color:#ffc46b}
+  .log a{color:#8ec9ff}
+
+  .item{display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item img{width:44px; height:44px; border-radius:7px; object-fit:cover; background:var(--bg); flex:none}
+  .item .m{flex:1; min-width:0}
+  .item .t{font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .item .s{font-size:11.5px; color:var(--dim)}
+  .item button{flex:none; width:auto; padding:7px 11px; font-size:12px; background:#fbeaea; color:var(--err)}
+  .empty{color:var(--dim); font-size:13px; text-align:center; padding:16px 0}
+  .warnbox{background:#fff8e6; border:1px solid #ffe0a3; border-radius:9px; padding:11px 13px;
+           font-size:12px; color:#7a5a10; margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ART MAP 관리자<a href="./">← 지도로</a></h1>
+  <p class="lead">전시 페이지 링크를 넣으면 정보를 추출해 지도에 추가합니다.</p>
+
+  <!-- 토큰 -->
+  <div class="card">
+    <h2>1. GitHub 토큰</h2>
+    <input id="token" type="password" placeholder="github_pat_..." autocomplete="off" />
+    <div class="hint">이 브라우저에만 저장됩니다. 서버로 보내지 않습니다.</div>
+    <div class="warnbox">
+      <b>토큰 만드는 법</b><br />
+      GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → Generate new token<br />
+      · Repository access: <b>Only select repositories</b> → <code>art-map</code><br />
+      · Permissions → Repository permissions → <b>Actions: Read and write</b><br />
+      이 토큰으로 할 수 있는 건 이 저장소의 워크플로 실행뿐입니다.
+    </div>
+    <div class="btns">
+      <button id="saveToken">저장</button>
+      <button id="clearToken">삭제</button>
+    </div>
+  </div>
+
+  <!-- 추가 -->
+  <div class="card">
+    <h2>2. 전시 추가</h2>
+    <label for="url">전시 페이지 URL</label>
+    <input id="url" type="url" placeholder="https://art-map.co.kr/exhibition/view.php?idx=32424" />
+    <div class="hint">art-map.co.kr 링크가 가장 정확합니다. 다른 사이트는 실패할 수 있습니다.</div>
+
+    <label for="category">분야</label>
+    <select id="category">
+      <option value="exhibition">전시·미술</option>
+      <option value="performance">공연</option>
+      <option value="festival">축제·행사</option>
+      <option value="education">교육·체험</option>
+      <option value="etc">기타</option>
+    </select>
+
+    <details>
+      <summary>직접 입력 (추출이 실패하거나 값이 틀릴 때)</summary>
+      <label for="title">제목</label>
+      <input id="title" placeholder="비우면 자동 추출" />
+      <label for="place">장소명</label>
+      <input id="place" placeholder="예) 일민미술관" />
+      <label for="address">주소</label>
+      <input id="address" placeholder="예) 서울 종로구 세종대로 152" />
+      <div class="row">
+        <div><label for="start">시작일</label><input id="start" type="date" /></div>
+        <div><label for="end">종료일</label><input id="end" type="date" /></div>
+      </div>
+      <div class="row">
+        <div><label for="lat">위도</label><input id="lat" inputmode="decimal" placeholder="37.5665" /></div>
+        <div><label for="lng">경도</label><input id="lng" inputmode="decimal" placeholder="126.9780" /></div>
+      </div>
+      <div class="hint">좌표는 네이버지도에서 장소 우클릭 → 좌표 복사로 확인할 수 있습니다.</div>
+    </details>
+
+    <div class="btns">
+      <button id="preview">미리보기</button>
+      <button id="submit" class="primary">지도에 추가</button>
+    </div>
+    <div id="log" class="log"></div>
+  </div>
+
+  <!-- 목록 -->
+  <div class="card">
+    <h2>3. 직접 추가한 전시 <span id="count" style="color:var(--dim)"></span></h2>
+    <div id="list"><div class="empty">불러오는 중…</div></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var OWNER = 'allmytown-cpu';
+  var REPO = 'art-map';
+  var WORKFLOW = 'add-exhibition.yml';
+  var API = 'https://api.github.com';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var logEl = $('log');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function log(msg, cls) {
+    logEl.classList.add('show');
+    logEl.innerHTML += (cls ? '<span class="' + cls + '">' + msg + '</span>' : msg) + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function resetLog() { logEl.innerHTML = ''; logEl.classList.remove('show'); }
+
+  // ── 토큰 ───────────────────────────────────────────────────
+  var KEY = 'artmap_admin_token';
+  $('token').value = localStorage.getItem(KEY) || '';
+  $('saveToken').addEventListener('click', function () {
+    var t = $('token').value.trim();
+    if (!t) { alert('토큰을 입력하세요.'); return; }
+    localStorage.setItem(KEY, t);
+    alert('저장했습니다.');
+    loadList();
+  });
+  $('clearToken').addEventListener('click', function () {
+    localStorage.removeItem(KEY); $('token').value = ''; alert('삭제했습니다.');
+  });
+  function token() { return ($('token').value || '').trim(); }
+
+  function gh(path, options) {
+    options = options || {};
+    return fetch(API + path, {
+      method: options.method || 'GET',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: 'Bearer ' + token(),
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+  }
+
+  // ── 워크플로 실행 ──────────────────────────────────────────
+  function dispatch(inputs, label) {
+    if (!token()) { alert('먼저 GitHub 토큰을 저장하세요.'); return; }
+    resetLog();
+    log('▶ ' + label + ' 요청 중…');
+
+    $('preview').disabled = $('submit').disabled = true;
+    var startedAt = new Date(Date.now() - 30000).toISOString();
+
+    gh('/repos/' + OWNER + '/' + REPO + '/actions/workflows/' + WORKFLOW + '/dispatches', {
+      method: 'POST',
+      body: { ref: 'main', inputs: inputs }
+    }).then(function (res) {
+      if (res.status === 204) { log('✔ 실행 요청됨. 결과를 기다립니다…', 'ok'); return pollRun(startedAt); }
+      return res.text().then(function (t) {
+        if (res.status === 401) throw new Error('토큰이 유효하지 않습니다 (401).');
+        if (res.status === 403) throw new Error('권한이 없습니다 (403). Actions: Read and write 권한을 확인하세요.');
+        if (res.status === 404) throw new Error('저장소나 워크플로를 찾을 수 없습니다 (404). 토큰의 repository access를 확인하세요.');
+        throw new Error('HTTP ' + res.status + ' ' + t.slice(0, 200));
+      });
+    }).catch(function (e) {
+      log('✖ ' + esc(e.message), 'err');
+    }).then(function () {
+      $('preview').disabled = $('submit').disabled = false;
+    });
+  }
+
+  function pollRun(since) {
+    var tries = 0;
+    return new Promise(function (resolve) {
+      (function step() {
+        tries++;
+        gh('/repos/' + OWNER + '/' + REPO + '/actions/runs?event=workflow_dispatch&per_page=5')
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            var run = (j.workflow_runs || []).filter(function (r) {
+              return r.path.indexOf(WORKFLOW) !== -1 && r.created_at >= since;
+            })[0];
+
+            if (!run) {
+              if (tries > 20) { log('… 실행을 찾지 못했습니다. Actions 탭에서 직접 확인하세요.', 'warn'); return resolve(); }
+              return setTimeout(step, 3000);
+            }
+            if (tries === 1 || tries % 3 === 0) {
+              log('   상태: ' + run.status + '  <a href="' + run.html_url + '" target="_blank">실행 로그 열기 ↗</a>');
+            }
+            if (run.status !== 'completed') {
+              if (tries > 80) { log('… 시간이 오래 걸립니다. 로그를 직접 확인하세요.', 'warn'); return resolve(); }
+              return setTimeout(step, 3000);
+            }
+            if (run.conclusion === 'success') {
+              log('✔ 완료되었습니다.', 'ok');
+              log('   지도 반영에는 1~2분 더 걸립니다 (GitHub Pages 배포).');
+              setTimeout(loadList, 4000);
+            } else {
+              log('✖ 실패: ' + run.conclusion, 'err');
+              log('   <a href="' + run.html_url + '" target="_blank">실행 로그에서 원인 확인 ↗</a>');
+            }
+            resolve();
+          })
+          .catch(function () { resolve(); });
+      })();
+    });
+  }
+
+  function collectInputs(dry) {
+    var url = $('url').value.trim();
+    if (!url && !dry) { alert('전시 페이지 URL을 입력하세요.'); return null; }
+    if (!/^https?:\/\//.test(url)) { alert('http로 시작하는 전체 주소를 입력하세요.'); return null; }
+
+    var inputs = { url: url, category: $('category').value, dry_run: dry };
+    ['title', 'place', 'address', 'start', 'end', 'lat', 'lng'].forEach(function (k) {
+      var v = ($(k).value || '').trim();
+      if (v) inputs[k] = v;
+    });
+    return inputs;
+  }
+
+  $('preview').addEventListener('click', function () {
+    var i = collectInputs(true);
+    if (i) dispatch(i, '미리보기');
+  });
+  $('submit').addEventListener('click', function () {
+    var i = collectInputs(false);
+    if (i) dispatch(i, '지도에 추가');
+  });
+
+  // ── 직접 추가한 전시 목록 ──────────────────────────────────
+  function loadList() {
+    fetch('data/sources/manual.json?v=' + Date.now())
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        $('count').textContent = rows.length ? '(' + rows.length + ')' : '';
+        if (!rows.length) { $('list').innerHTML = '<div class="empty">아직 없습니다.</div>'; return; }
+
+        $('list').innerHTML = '';
+        rows.slice().reverse().forEach(function (e) {
+          var d = document.createElement('div');
+          d.className = 'item';
+          d.innerHTML =
+            (e.thumbnail ? '<img src="' + esc(e.thumbnail) + '" alt="" onerror="this.remove()" />' : '') +
+            '<div class="m">' +
+              '<div class="t">' + esc(e.title) + '</div>' +
+              '<div class="s">' + esc([e.place, (e.start || '') + '~' + (e.end || '')].filter(Boolean).join(' · ')) +
+                (e.lat ? '' : ' · <b>좌표없음</b>') + '</div>' +
+            '</div>' +
+            '<button data-id="' + esc(e.id) + '">삭제</button>';
+          d.querySelector('button').addEventListener('click', function () {
+            if (!confirm('삭제할까요?\n\n' + e.title)) return;
+            dispatch({ remove_id: e.id, url: '', category: 'exhibition', dry_run: false }, '삭제');
+          });
+          $('list').appendChild(d);
+        });
+      })
+      .catch(function () { $('list').innerHTML = '<div class="empty">목록을 불러오지 못했습니다.</div>'; });
+  }
+
+  loadList();
+})();
+</script>
+</body>
+</html>
