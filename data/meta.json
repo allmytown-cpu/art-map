@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-13T14:31:33.846Z",
+  "updatedAt": "2026-09-13T14:50:05.759Z",
   "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
   "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
   "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
@@ -8,11 +8,11 @@
     "to": "20301231",
     "basis": "endDate"
   },
-  "total": 1140,
-  "withCoord": 991,
+  "total": 1159,
+  "withCoord": 1010,
   "byCategory": {
     "performance": 675,
-    "exhibition": 298,
+    "exhibition": 317,
     "education": 111,
     "festival": 56
   },
@@ -30,14 +30,16 @@
   },
   "geocodedAt": "2026-09-13T13:41:15.965Z",
   "bySource": {
-    "kcisa": 1139,
+    "kcisa": 1130,
+    "artmap": 28,
     "manual": 1
   },
   "sources": {
     "manual": 1,
+    "artmap": 29,
     "kcisa": 1139
   },
-  "duplicatesMerged": 0,
+  "duplicatesMerged": 10,
   "kcisa": {
     "fetchedAt": "2026-09-13T14:29:33.792Z",
     "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",

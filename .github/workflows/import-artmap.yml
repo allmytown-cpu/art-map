@@ -1,0 +1,57 @@
+name: art-map 전시 가져오기
+
+# art-map.co.kr 의 진행중 전시를 일괄 수집한다.
+# 남의 서버를 긁는 것이므로 매일 돌리지 않는다. (주 1회 + 수동)
+
+on:
+  schedule:
+    - cron: '30 20 * * 1'   # 매주 월요일 05:30 KST
+  workflow_dispatch:
+    inputs:
+      max_batches:
+        description: '최대 배치 수 (1배치 = 4건)'
+        default: '200'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: art-map-data
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci || npm install
+
+      - name: art-map 수집
+        run: node scripts/sources/artmap.mjs --max-batches "${{ inputs.max_batches || '200' }}"
+
+      - name: events.json 재생성
+        run: node scripts/build-events.mjs | tee /tmp/build.txt
+
+      - name: 요약
+        run: |
+          { echo '```'; cat /tmp/build.txt; echo '```'; } >> $GITHUB_STEP_SUMMARY
+
+      - name: 커밋
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "변경사항 없음"
+          else
+            N=$(node -e "console.log(require('./data/sources/artmap.json').length)")
+            git commit -m "chore(data): art-map 전시 갱신 (${N}건)"
+            git pull --rebase origin main || true
+            git push
+          fi

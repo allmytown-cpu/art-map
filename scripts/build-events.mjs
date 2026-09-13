@@ -14,8 +14,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PATHS, CATEGORY_RULES, DEFAULT_CATEGORY } from './config.mjs';
 
+// priority가 높을수록 중복 시 그쪽 값이 살아남는다.
 const SOURCES = [
-  { id: 'manual', file: 'data/sources/manual.json', priority: 2, label: '직접 추가' },
+  { id: 'manual', file: 'data/sources/manual.json', priority: 3, label: '직접 추가' },
+  // art-map은 전시 전용이라 제목·장소·좌표 품질이 공공데이터보다 낫다.
+  { id: 'artmap', file: 'data/sources/artmap.json', priority: 2, label: 'art-map' },
   { id: 'kcisa', file: 'data/sources/kcisa.json', priority: 1, label: '공공데이터' },
 ];
 
