@@ -51,6 +51,17 @@ scripts/build-events.mjs  →  data/events.json  ←  프론트엔드는 이것�
 - robots.txt는 `/art-map*/`만 Yeti에게 금지. 목록·상세는 제한 없음.
   그래도 요청 간격을 두고 주 1회만 돌린다.
 
+## opengallery.co.kr
+
+`https://www.opengallery.co.kr/exhibition/{id}/`
+
+- `og:title` = `전시명 | 갤러리명` (뒤의 갤러리명은 떼어낸다)
+- `og:description` = `[지역] 갤러리 | 시작 ~ 종료`
+- `table.exhibitionDetail-infoTable-table` → 작가 / 장소 / 기간 / 시간 / 관람료
+- `.exhibitionDetail-location-name` = 갤러리명,
+  바로 뒤 `.exhibitionDetail-sm` = **도로명 주소** (좌표는 없음 → 지오코딩)
+- 등록자가 보도자료를 붙여넣어 제목에 `[출처] …` 가 섞이는 경우가 있어 잘라낸다.
+
 ## 지도 (네이버)
 
 - `index.html`의 `ncpKeyId=ior0d6uleb` (Client Secret은 GitHub Secrets)

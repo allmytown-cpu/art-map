@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  전시 페이지 URL → 우리 스키마
 //
-//  1) 사이트별 어댑터 (정확)   : art-map.co.kr 처럼 구조가 일정한 곳
+//  1) 사이트별 어댑터 (정확)   : art-map.co.kr, opengallery.co.kr
 //  2) 범용 추출 (부정확)       : JSON-LD schema.org Event → OpenGraph → 휴리스틱
 //
 //  범용 추출은 성공률이 낮다. 디자인 위주 사이트(미술관 자체 홈페이지)는
@@ -106,6 +106,71 @@ function artmapAdapter(html, url) {
   };
 }
 
+// ── 어댑터: opengallery.co.kr ────────────────────────────────
+function opengalleryAdapter(html, url) {
+  const table = (html.match(/<table[^>]*class=["'][^"']*exhibitionDetail-infoTable-table[^"']*["'][\s\S]*?<\/table>/i) || [])[0];
+
+  const rows = {};
+  if (table) {
+    for (const r of table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+      const th = (r[1].match(/<th[^>]*>([\s\S]*?)<\/th>/i) || [])[1];
+      const td = (r[1].match(/<td[^>]*>([\s\S]*?)<\/td>/i) || [])[1];
+      if (!th) continue;
+      // 작가 셀은 이름마다 줄바꿈+쉼표가 섞여 오므로 공백을 정리한다
+      rows[stripTags(th)] = stripTags(td || '').replace(/\s*,\s*/g, ', ').replace(/,\s*$/, '');
+    }
+  }
+
+  // 위치 정보 섹션: 갤러리명 + 주소
+  const locName = stripTags((html.match(/class=["'][^"']*exhibitionDetail-location-name[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || [])[1] || '');
+  const locAddr = stripTags(
+    (html.match(/exhibitionDetail-location-name[^"']*["'][^>]*>[\s\S]*?<div class=["'][^"']*exhibitionDetail-sm[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || [])[1] || ''
+  );
+
+  let title = meta(html, 'og:title') ||
+    stripTags((html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i) || [])[1] || '');
+  if (!title) return null;
+
+  // 등록자가 보도자료를 그대로 붙여넣어 "[출처] …" 같은 꼬리가 섞여 오는 경우가 있다
+  title = title.split(/\s*\[출처\]|\s*출처\s*[:：]/)[0].trim();
+
+  const place = rows['장소'] || locName;
+  // 제목이 "전시명 | 갤러리명" 형태로 오는데 장소는 따로 있으므로 꼬리를 뗀다
+  if (place) {
+    const tail = new RegExp('\\s*[|｜]\\s*' + place.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$');
+    title = title.replace(tail, '').trim();
+  }
+
+  // og:description = "[서울] 소슬금 갤러리 | 2026-08-31 ~ 2026-09-20"
+  const ogDesc = meta(html, 'og:description');
+  const area = (ogDesc.match(/^\[([^\]]+)\]/) || [])[1] || '';
+
+  const [start, end] = parseDateRange(rows['기간'] || ogDesc);
+  if (!start) return null;   // 기간을 못 읽으면 이 어댑터로는 실패 처리
+
+  const descParts = [];
+  if (rows['작가']) descParts.push('참여작가: ' + rows['작가']);
+  if (rows['시간']) descParts.push('관람시간: ' + rows['시간']);
+
+  return {
+    adapter: 'opengallery.co.kr',
+    title,
+    category: 'exhibition',
+    realm: '전시',
+    start,
+    end,
+    place,
+    area,
+    sigungu: '',
+    address: locAddr,
+    price: rows['관람료'] || '',
+    phone: rows['문의'] || rows['전화'] || '',
+    url,
+    thumbnail: httpsify(absoluteUrl(meta(html, 'og:image'), url)),
+    desc: cleanText(descParts.join(' / ')).slice(0, 500),
+  };
+}
+
 // ── 범용: JSON-LD schema.org ─────────────────────────────────
 function jsonLdAdapter(html, url) {
   const blocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
@@ -192,6 +257,7 @@ function genericAdapter(html, url) {
 // ── 진입점 ───────────────────────────────────────────────────
 const ADAPTERS = [
   { host: /(^|\.)art-map\.co\.kr$/i, fn: artmapAdapter },
+  { host: /(^|\.)opengallery\.co\.kr$/i, fn: opengalleryAdapter },
 ];
 
 export async function extractFromUrl(url) {
