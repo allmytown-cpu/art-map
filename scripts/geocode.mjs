@@ -31,23 +31,32 @@ async function readJson(file, fallback) {
   catch { return fallback; }
 }
 
-/** 지오코딩 질의어 후보를 좋은 순서대로 생성 */
+/** 지오코딩 질의어 후보를 정확도 높은 순서대로 생성 */
 function buildQueries(ev) {
   const out = [];
   const addr = (ev.address || '').trim();
   const place = (ev.place || '').trim();
   const area = (ev.area || '').trim();
+  const sigungu = (ev.sigungu || '').trim();
 
   if (addr) {
+    // "서울특별시 동대문구 왕산로 517 서울문화재단 본관" 처럼 뒤에 건물명이 붙어 있으면
+    // 지오코더가 실패하는 경우가 많아, 원문 → 층/호 제거 → 도로명+번지 순으로 시도한다.
     out.push(addr);
-    // "서울 종로구 ... 1층 101호" 같은 상세주소는 잘라내면 성공률이 올라간다.
-    const trimmed = addr.replace(/\s*(\d+층|지하\s*\d+층|[\w\d-]+호|B\d+)\s*$/i, '').trim();
-    if (trimmed && trimmed !== addr) out.push(trimmed);
+    const noUnit = addr.replace(/\s*(지하\s*)?\d+층\s*$|\s*[\w\d-]+호\s*$/gi, '').trim();
+    if (noUnit && noUnit !== addr) out.push(noUnit);
+    const roadOnly = addr.match(/^(.*?(?:로|길)\s*\d+(?:-\d+)?)/);
+    if (roadOnly && roadOnly[1] !== addr) out.push(roadOnly[1].trim());
   }
+
+  // 주소가 없으면 지역 + 장소명으로라도 찍는다 (정확도는 떨어짐)
   if (place) {
-    out.push(area && !place.includes(area) ? `${area} ${place}` : place);
+    const region = [area, sigungu].filter(Boolean).join(' ');
+    if (region && !place.includes(sigungu)) out.push(`${region} ${place}`);
+    out.push(place);
   }
-  return [...new Set(out.filter((q) => q.length >= 2))];
+
+  return [...new Set(out.filter((q) => q.length >= 3))];
 }
 
 async function geocodeNcp(query) {

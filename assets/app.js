@@ -206,8 +206,11 @@
     state.filtered = state.events.filter(function (ev) {
       if (!state.active[ev.category]) return false;
       if (q) {
-        var hay = (ev.title + ' ' + ev.place + ' ' + ev.area + ' ' + ev.address + ' ' + ev.realm).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
+        if (!ev._hay) {
+          ev._hay = (ev.title + ' ' + ev.place + ' ' + ev.area + ' ' + ev.sigungu + ' ' +
+                     ev.address + ' ' + ev.realm).toLowerCase();
+        }
+        if (ev._hay.indexOf(q) === -1) return false;
       }
       if (bounds) {
         if (ev.lat === null) return false;
@@ -320,7 +323,8 @@
 
       var metaBits = [fmtPeriod(ev)];
       if (ev.place) metaBits.push(ev.place);
-      else if (ev.area) metaBits.push(ev.area);
+      var region = [ev.area, ev.sigungu].filter(Boolean).join(' ');
+      if (region && metaBits.indexOf(region) === -1) metaBits.push(region);
 
       li.innerHTML =
         thumb +
@@ -377,10 +381,14 @@
     row('기간', esc(ev.start ? (ev.start.replace(/-/g, '.') + (ev.end && ev.end !== ev.start ? ' ~ ' + ev.end.replace(/-/g, '.') : '')) : '미정') +
                 (st.text ? ' <span class="badge" style="background:' + c.color + '">' + esc(st.text) + '</span>' : ''));
     row('장소', esc(ev.place));
-    row('주소', esc(ev.address || ev.area));
+    row('주소', esc(ev.address || [ev.area, ev.sigungu].filter(Boolean).join(' ')));
     row('분야', esc(ev.realm || c.label));
     row('요금', esc(ev.price));
-    row('문의', ev.phone ? '<a href="tel:' + esc(ev.phone.replace(/[^\d+-]/g, '')) + '">' + esc(ev.phone) + '</a>' : '');
+    // 전화번호 필드에 "국립춘천박물관 033-260-1500"처럼 기관명이 섞여 오므로 번호만 뽑아 링크한다.
+    var telDigits = (String(ev.phone).match(/[\d]{2,4}-[\d]{3,4}-[\d]{4}|\d{9,11}/) || [])[0];
+    row('문의', ev.phone
+      ? (telDigits ? '<a href="tel:' + esc(telDigits) + '">' + esc(ev.phone) + '</a>' : esc(ev.phone))
+      : '');
     if (ev._dist != null) row('거리', '내 위치에서 <b>' + fmtDist(ev._dist) + '</b>');
 
     var naverUrl = ev.lat !== null
@@ -388,18 +396,22 @@
         '?c=' + ev.lng + ',' + ev.lat + ',16,0,0,0,dh'
       : 'https://map.naver.com/p/search/' + encodeURIComponent((ev.place || '') + ' ' + ev.title);
 
+    var geoNote = '';
+    if (ev.geo === 'geocode') geoNote = '※ 원본에 좌표가 없어 주소로 추정한 위치입니다.';
+    else if (ev.geo === 'sibling') geoNote = '※ 같은 장소의 다른 행사 좌표를 사용한 위치입니다.';
+    else if (ev.lat === null) geoNote = '※ 원본에 위치정보가 없어 지도에 표시되지 않습니다.';
+
     el.detailBody.innerHTML =
       (ev.thumbnail ? '<img class="d-hero" src="' + esc(ev.thumbnail) + '" alt="" onerror="this.remove()" />' : '') +
       '<div class="d-pad">' +
         '<h2 class="d-title">' + esc(ev.title) + '</h2>' +
-        (ev.subtitle ? '<p class="d-sub">' + esc(ev.subtitle) + '</p>' : '') +
         '<dl class="d-rows">' + rows + '</dl>' +
         (ev.desc ? '<div class="d-desc">' + esc(ev.desc) + '</div>' : '') +
         '<div class="d-actions">' +
-          '<a class="d-btn primary" href="' + esc(naverUrl) + '" target="_blank" rel="noopener">길찾기</a>' +
-          (ev.url ? '<a class="d-btn" href="' + esc(ev.url) + '" target="_blank" rel="noopener">상세정보</a>' : '') +
+          (ev.lat !== null ? '<a class="d-btn primary" href="' + esc(naverUrl) + '" target="_blank" rel="noopener">길찾기</a>' : '') +
+          (ev.url ? '<a class="d-btn' + (ev.lat === null ? ' primary' : '') + '" href="' + esc(ev.url) + '" target="_blank" rel="noopener">상세정보</a>' : '') +
         '</div>' +
-        (ev.geo === 'geocode' ? '<p class="credit" style="margin-top:14px">※ 원본에 좌표가 없어 주소 기반으로 추정한 위치입니다.</p>' : '') +
+        (geoNote ? '<p class="credit" style="margin-top:14px">' + geoNote + '</p>' : '') +
       '</div>';
 
     el.detail.hidden = false;

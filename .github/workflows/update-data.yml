@@ -46,6 +46,9 @@ jobs:
       - name: 공공데이터 수집
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          # detail2는 1건당 1요청이라 실행당 상한을 둔다.
+          # data/detail-cache.json에 캐시되므로 평소에는 신규 행사분만 호출된다.
+          DETAIL_BUDGET: '1600'
         run: node scripts/fetch-events.mjs
 
       - name: 좌표 보정 (지오코딩)
@@ -70,7 +73,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/events.json data/meta.json data/geocode-cache.json
+          git add data/events.json data/meta.json data/geocode-cache.json data/detail-cache.json
           if git diff --staged --quiet; then
             echo "변경사항 없음 — 커밋 생략"
           else
