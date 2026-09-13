@@ -133,14 +133,23 @@ if (lat && lng) {
 }
 
 // ── 검증 ─────────────────────────────────────────────────────
-const problems = [];
-if (!info.title) problems.push('제목 없음');
-if (!info.start || !info.end) problems.push('기간을 못 읽음 (--start / --end 로 지정하세요)');
-if (!info.place && !info.address) problems.push('장소·주소 없음');
-if (!lat) problems.push('좌표 없음 (--lat / --lng 로 직접 지정 가능)');
+// 불완전한 항목이 그대로 커밋되면 지도가 오염된다.
+// '치명적' 문제가 하나라도 있으면 저장을 거부한다. (--force 로 무시 가능)
+const fatal = [];
+const warn = [];
 
-if (problems.length) {
-  console.log('\n  ⚠ 확인 필요: ' + problems.join(' · '));
+if (!info.title) fatal.push('제목 없음');
+if (!info.start || !info.end) fatal.push('기간을 못 읽음 → --start 2026-09-01 --end 2026-10-01');
+if (!info.place && !info.address && !lat) fatal.push('장소·주소·좌표가 모두 없음 → --place 또는 --lat/--lng');
+if (!lat) warn.push('좌표 없음 (목록에는 나오지만 지도에는 표시되지 않음)');
+
+if (warn.length) console.log('\n  ⚠ ' + warn.join(' · '));
+
+if (fatal.length && !flags.force) {
+  console.error('\n[저장 거부] 아래 항목이 없으면 지도에 쓸 수 없습니다.');
+  fatal.forEach((p) => console.error('  · ' + p));
+  console.error('\n  값을 직접 지정해 다시 실행하거나, 그래도 넣으려면 --force 를 붙이세요.');
+  process.exit(1);
 }
 
 // ── 저장 ─────────────────────────────────────────────────────
@@ -173,7 +182,7 @@ if (flags.dry) {
   console.log('\n[3/3] --dry 모드: 저장하지 않았습니다.');
   console.log(JSON.stringify(record, null, 1));
   // process.exit()를 쓰면 Windows에서 libuv 어서션이 뜨므로 exitCode만 설정한다.
-  process.exitCode = problems.length ? 2 : 0;
+  process.exitCode = warn.length ? 2 : 0;
 }
 
 if (!flags.dry) {

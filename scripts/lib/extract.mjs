@@ -198,19 +198,28 @@ export async function extractFromUrl(url) {
   const { html, finalUrl } = await fetchHtml(url);
   const host = new URL(finalUrl).hostname;
 
-  const chain = [];
-  for (const a of ADAPTERS) if (a.host.test(host)) chain.push(a.fn);
-  chain.push(jsonLdAdapter, genericAdapter);
+  const dedicated = ADAPTERS.filter((a) => a.host.test(host));
+
+  // 전용 어댑터가 있는 사이트에서 그 어댑터가 실패하면,
+  // 범용 추출로 내려가면 안 된다. 사이트 공통 og:title("ARTMAP | Art is
+  // Everywhere" 같은)을 전시명으로 집어 쓰레기 데이터를 만들기 때문이다.
+  // 어댑터 실패 = 그 URL이 전시 상세 페이지가 아니라는 신호로 본다.
+  if (dedicated.length) {
+    for (const a of dedicated) {
+      const r = a.fn(html, finalUrl);
+      if (r && r.title) { r.sourceUrl = finalUrl; return r; }
+    }
+    throw new Error(
+      `${host} 의 전시 상세 페이지 형식이 아닙니다.\n` +
+      '  (삭제되었거나 URL이 잘못되었을 수 있습니다)'
+    );
+  }
 
   const tried = [];
-  for (const fn of chain) {
+  for (const fn of [jsonLdAdapter, genericAdapter]) {
     let r = null;
     try { r = fn(html, finalUrl); } catch (e) { tried.push(`${fn.name}: ${e.message}`); continue; }
-    if (r && r.title) {
-      r.sourceUrl = finalUrl;
-      r.tried = tried;
-      return r;
-    }
+    if (r && r.title) { r.sourceUrl = finalUrl; return r; }
     tried.push(`${fn.name}: 추출 실패`);
   }
   throw new Error('전시 정보를 추출하지 못했습니다.\n  ' + tried.join('\n  '));
