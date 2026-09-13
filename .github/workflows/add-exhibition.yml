@@ -85,11 +85,12 @@ jobs:
           NCP_APIGW_KEY_ID: ${{ secrets.NCP_APIGW_KEY_ID }}
           NCP_APIGW_KEY: ${{ secrets.NCP_APIGW_KEY }}
         run: |
-          if [ -z "${{ inputs.url }}" ]; then
-            echo "url 또는 remove_id 중 하나는 반드시 입력해야 합니다." >&2
+          if [ -z "${{ inputs.url }}" ] && [ -z "${{ inputs.title }}" ]; then
+            echo "URL을 넣거나, URL이 없다면 '제목'을 직접 입력해야 합니다." >&2
             exit 1
           fi
-          ARGS=("${{ inputs.url }}")
+          ARGS=()
+          [ -n "${{ inputs.url }}" ] && ARGS+=("${{ inputs.url }}")
           [ -n "${{ inputs.title }}" ]    && ARGS+=(--title    "${{ inputs.title }}")
           [ -n "${{ inputs.place }}" ]    && ARGS+=(--place    "${{ inputs.place }}")
           [ -n "${{ inputs.address }}" ]  && ARGS+=(--address  "${{ inputs.address }}")

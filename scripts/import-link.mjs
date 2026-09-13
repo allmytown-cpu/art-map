@@ -14,7 +14,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { extractFromUrl } from './lib/extract.mjs';
-import { resolveCoords, buildGazetteer, loadCache, saveCache, HAS_NCP } from './lib/geocode.mjs';
+import { resolveCoords, buildGazetteer, loadCache, saveCache, buildQueries, HAS_NCP } from './lib/geocode.mjs';
 import { PATHS, CATEGORY_RULES } from './config.mjs';
 
 const MANUAL = 'data/sources/manual.json';
@@ -55,35 +55,56 @@ if (flags.remove) {
   process.exit(0);
 }
 
-const url = flags.url || positional[0];
-if (!url || !/^https?:\/\//.test(url)) {
+const url = flags.url || positional[0] || '';
+const hasUrl = /^https?:\/\//.test(url);
+
+// URL이 없어도 제목만 있으면 직접 등록할 수 있다.
+// (아트맵에 없는 전시를 손으로 넣는 경우)
+if (!hasUrl && typeof flags.title !== 'string') {
   console.error('\n사용법: node scripts/import-link.mjs "<전시 페이지 URL>" [옵션]');
-  console.error('옵션: --title --place --address --start --end --category --price --phone --dry\n');
+  console.error('       node scripts/import-link.mjs --title "전시명" --place "장소" --start ... --end ...');
+  console.error('옵션: --title --place --address --start --end --category --price --phone --lat --lng --dry\n');
   process.exit(1);
 }
 
 // ── 실행 ─────────────────────────────────────────────────────
 console.log('━'.repeat(62));
-console.log('ART MAP · 링크로 전시 추가');
-console.log('  ' + url);
+console.log('ART MAP · 전시 추가');
+console.log('  ' + (hasUrl ? url : '(URL 없음 · 직접 입력)'));
 console.log('━'.repeat(62));
 
-let info;
-try {
-  info = await extractFromUrl(url);
-} catch (e) {
-  console.error('\n[추출 실패] ' + e.message);
-  console.error('\n→ 아래처럼 직접 값을 넘기면 등록할 수 있습니다:');
-  console.error(`   node scripts/import-link.mjs "${url}" --title "전시명" --place "장소명" --start 2026-09-01 --end 2026-10-01\n`);
-  process.exit(1);
+const EMPTY = {
+  adapter: '직접 입력', title: '', category: 'exhibition', realm: '전시',
+  start: null, end: null, place: '', area: '', sigungu: '', address: '',
+  price: '', phone: '', url: '', thumbnail: '', desc: '', sourceUrl: url,
+};
+
+let info = { ...EMPTY };
+let extractError = null;
+
+if (hasUrl) {
+  try {
+    info = await extractFromUrl(url);
+  } catch (e) {
+    // 추출 실패를 곧바로 종료 사유로 삼으면, 사용자가 직접 넣은 값을
+    // 써보지도 못하고 죽는다. 실패는 기록만 하고 수동값으로 채우게 한다.
+    extractError = e.message;
+    info = { ...EMPTY, url };
+  }
 }
 
-console.log(`\n[1/3] 정보 추출  (어댑터: ${info.adapter})`);
+if (extractError) {
+  console.log('\n[1/3] 자동 추출 실패 — 직접 입력한 값으로 진행합니다');
+  console.log('  사유: ' + extractError.split('\n')[0]);
+} else {
+  console.log(`\n[1/3] 정보 추출  (어댑터: ${info.adapter})`);
+}
 
 // 수동 지정값이 우선
-for (const k of ['title', 'place', 'address', 'start', 'end', 'price', 'phone', 'area', 'sigungu', 'desc']) {
-  if (typeof flags[k] === 'string') info[k] = flags[k];
+for (const k of ['title', 'place', 'address', 'start', 'end', 'price', 'phone', 'area', 'sigungu', 'desc', 'thumbnail']) {
+  if (typeof flags[k] === 'string' && flags[k].trim()) info[k] = flags[k].trim();
 }
+if (!info.url && hasUrl) info.url = url;
 if (typeof flags.category === 'string') {
   const ok = CATEGORY_RULES.map((c) => c.id).concat('etc');
   if (!ok.includes(flags.category)) {
@@ -113,23 +134,51 @@ buildGazetteer([...kcisa, ...manual]);
 
 let lat = flags.lat ? parseFloat(flags.lat) : null;
 let lng = flags.lng ? parseFloat(flags.lng) : null;
-let via = lat && lng ? 'manual' : null;
+let via = Number.isFinite(lat) && Number.isFinite(lng) ? 'manual' : null;
+if (!via) { lat = null; lng = null; }
 
 if (!via) {
+  const queries = buildQueries(info);
+  if (queries.length) console.log('  질의: ' + queries.join('  |  '));
   const hit = await resolveCoords(info);
   if (hit) { lat = hit.lat; lng = hit.lng; via = hit.via; }
 }
+
+// 주소로 못 찾았으면, 주소를 더 거칠게 다듬어 한 번 더 시도한다.
+// (건물명이 붙어 있거나 동/번지 표기가 특이하면 지오코더가 실패한다)
+if (!via && info.address) {
+  const fallbacks = [
+    info.address.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim(),
+    // 건물명 등 뒤쪽 덩어리를 떼고 "시도 시군구 도로명 번호"까지만
+    (info.address.match(/^(\S+\s+\S+\s+\S*(?:로|길)\s*\d+(?:-\d+)?)/) || [])[1],
+    // 지번주소: "서울 종로구 화동 106-5"
+    (info.address.match(/^(\S+\s+\S+\s+\S+동\s*\d+(?:-\d+)?)/) || [])[1],
+  ].filter((q) => q && q.length >= 5 && q !== info.address);
+
+  for (const q of [...new Set(fallbacks)]) {
+    const hit = await resolveCoords({ address: q });
+    if (hit) {
+      lat = hit.lat; lng = hit.lng; via = hit.via + '(보정)';
+      console.log(`  주소 보정 성공: "${q}"`);
+      break;
+    }
+  }
+}
+
 await saveCache();
 
 if (lat && lng) {
   console.log(`  ✔ ${lat}, ${lng}  (출처: ${via})`);
 } else {
   console.log('  ✖ 좌표를 찾지 못했습니다.');
-  if (!HAS_NCP) {
-    console.log('    국내 지번주소는 OpenStreetMap이 거의 못 찾습니다.');
-    console.log('    NCP_APIGW_KEY_ID / NCP_APIGW_KEY 를 설정하면 네이버 지오코딩을 씁니다.');
+  if (!info.address && !info.place) {
+    console.log('    주소나 장소명이 없습니다. 주소를 입력하면 좌표를 자동으로 찾습니다.');
+  } else {
+    console.log('    주소를 "서울 종로구 세종대로 152" 처럼 도로명+건물번호까지 입력해 보세요.');
   }
-  console.log('    또는 네이버지도에서 좌표를 확인해 --lat 37.5xxx --lng 126.9xxx 로 지정하세요.');
+  if (!HAS_NCP) {
+    console.log('    (네이버 지오코딩 키가 없어 정확도가 낮은 OpenStreetMap을 쓰는 중입니다)');
+  }
 }
 
 // ── 검증 ─────────────────────────────────────────────────────
@@ -138,23 +187,27 @@ if (lat && lng) {
 const fatal = [];
 const warn = [];
 
-if (!info.title) fatal.push('제목 없음');
-if (!info.start || !info.end) fatal.push('기간을 못 읽음 → --start 2026-09-01 --end 2026-10-01');
-if (!info.place && !info.address && !lat) fatal.push('장소·주소·좌표가 모두 없음 → --place 또는 --lat/--lng');
+if (!info.title) fatal.push('제목 — 직접 입력란의 "제목"을 채우세요');
+if (!info.start || !info.end) fatal.push('기간 — "시작일"과 "종료일"을 채우세요');
+if (!info.place && !info.address && !lat) fatal.push('위치 — "장소명" 또는 "주소"를 채우세요');
 if (!lat) warn.push('좌표 없음 (목록에는 나오지만 지도에는 표시되지 않음)');
 
 if (warn.length) console.log('\n  ⚠ ' + warn.join(' · '));
 
 if (fatal.length && !flags.force) {
-  console.error('\n[저장 거부] 아래 항목이 없으면 지도에 쓸 수 없습니다.');
+  console.error('\n[저장 거부] 아래 항목이 비어 있습니다.');
   fatal.forEach((p) => console.error('  · ' + p));
-  console.error('\n  값을 직접 지정해 다시 실행하거나, 그래도 넣으려면 --force 를 붙이세요.');
+  if (extractError) {
+    console.error('\n  이 링크는 자동 추출이 안 되는 사이트입니다.');
+    console.error('  관리자 페이지의 "직접 입력" 항목을 펼쳐 값을 채운 뒤 다시 실행하세요.');
+  }
   process.exit(1);
 }
 
 // ── 저장 ─────────────────────────────────────────────────────
 const record = {
-  id: hashId(info.sourceUrl || url),
+  // URL이 없으면 제목+장소+시작일로 식별한다. 같은 전시를 두 번 넣으면 갱신된다.
+  id: hashId(hasUrl ? (info.sourceUrl || url) : `${info.title}|${info.place}|${info.start}`),
   source: 'manual',
   sourceUrl: info.sourceUrl || url,
   adapter: info.adapter,
