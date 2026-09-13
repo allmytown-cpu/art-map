@@ -201,6 +201,7 @@
     log('▶ ' + label + ' 요청 중…');
 
     $('preview').disabled = $('submit').disabled = true;
+    dispatchedAt = Date.now();
     var startedAt = new Date(Date.now() - 30000).toISOString();
 
     gh('/repos/' + OWNER + '/' + REPO + '/actions/workflows/' + WORKFLOW + '/dispatches', {
@@ -219,6 +220,38 @@
     }).then(function () {
       $('preview').disabled = $('submit').disabled = false;
     });
+  }
+
+  var dispatchedAt = 0;
+
+  /**
+   * 지도에 실제로 반영될 때까지 기다린다.
+   * 커밋은 즉시 끝나지만 GitHub Pages 재빌드에 35~40초, CDN 전파까지
+   * 더해 보통 1분 안팎이 걸린다. 그냥 "기다리세요"라고 두면 됐는지
+   * 알 수 없으므로 실제 배포본을 확인해 알려준다.
+   */
+  function waitForDeploy() {
+    var t0 = Date.now();
+    var before = deployedSig;
+    log('… 지도 반영 대기중 (GitHub Pages 재배포)');
+
+    (function step() {
+      var elapsed = Math.round((Date.now() - t0) / 1000);
+      fetch('data/sources/manual.json?v=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (txt) {
+          if (txt && txt !== before) {
+            deployedSig = txt;
+            log('✔ 지도에 반영되었습니다. (' + elapsed + '초)', 'ok');
+            log('   <a href="./" target="_blank">지도에서 확인 ↗</a>');
+            return;
+          }
+          if (elapsed > 180) { log('… 아직 반영되지 않았습니다. 잠시 후 지도를 새로고침해 보세요.', 'warn'); return; }
+          if (elapsed && elapsed % 15 < 4) log('   ' + elapsed + '초 경과…');
+          setTimeout(step, 4000);
+        })
+        .catch(function () { setTimeout(step, 4000); });
+    })();
   }
 
   function pollRun(since) {
@@ -245,9 +278,9 @@
               return setTimeout(step, 3000);
             }
             if (run.conclusion === 'success') {
-              log('✔ 완료되었습니다.', 'ok');
-              log('   지도 반영에는 1~2분 더 걸립니다 (GitHub Pages 배포).');
-              setTimeout(loadList, 4000);
+              log('✔ 처리 완료 (' + Math.round((Date.now() - dispatchedAt) / 1000) + '초)', 'ok');
+              loadList(true);          // 저장소에서 바로 읽어 목록 즉시 갱신
+              waitForDeploy();         // 지도(Pages) 반영까지 추적
             } else {
               log('✖ 실패: ' + run.conclusion, 'err');
               log('   <a href="' + run.html_url + '" target="_blank">실행 로그에서 원인 확인 ↗</a>');
@@ -282,8 +315,19 @@
   });
 
   // ── 직접 추가한 전시 목록 ──────────────────────────────────
-  function loadList() {
-    fetch('data/sources/manual.json?v=' + Date.now())
+  var deployedSig = '';   // 현재 배포본의 manual.json 원문 (반영 감지용)
+
+  /**
+   * @param {boolean} fresh 저장소에서 직접 읽을지 여부.
+   *   Pages는 재배포 전까지 옛 파일을 주므로, 방금 추가한 것을 바로
+   *   보여주려면 raw.githubusercontent 를 읽어야 한다.
+   */
+  function loadList(fresh) {
+    var url = fresh
+      ? 'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/main/data/sources/manual.json?v=' + Date.now()
+      : 'data/sources/manual.json?v=' + Date.now();
+
+    fetch(url, { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
         $('count').textContent = rows.length ? '(' + rows.length + ')' : '';
@@ -310,6 +354,12 @@
       })
       .catch(function () { $('list').innerHTML = '<div class="empty">목록을 불러오지 못했습니다.</div>'; });
   }
+
+  // 현재 배포본을 미리 기억해 둔다 (반영 여부 비교용)
+  fetch('data/sources/manual.json?v=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (t) { deployedSig = t; })
+    .catch(function () {});
 
   loadList();
 })();

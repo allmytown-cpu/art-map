@@ -67,12 +67,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - run: npm ci || npm install
+      # setup-node / npm install 을 하지 않는다.
+      # 이 워크플로가 쓰는 스크립트(import-link, build-events)는 외부 패키지를
+      # 쓰지 않고, 러너에는 최신 Node가 이미 설치돼 있다. 약 8초 절약.
+      # (fast-xml-parser는 공공데이터 수집용이라 update-data.yml 에만 필요)
 
       - name: 전시 삭제
         if: ${{ inputs.remove_id != '' }}
