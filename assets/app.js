@@ -487,6 +487,24 @@
     naver.maps.Event.addListener(map, 'idle', function () {
       if (state.boundsOnly) scheduleFilters();
     });
+
+    // 타일이 끝내 안 뜨는 경우를 감지한다.
+    // navermap_authFailure가 호출되지 않는 실패(타일 요청만 401 등)도 있어서
+    // 실제로 그려진 타일이 있는지 직접 확인한다.
+    setTimeout(function () {
+      if (window.__mapAuthFailed) return;
+      var tiles = document.querySelectorAll('#map img, #map canvas');
+      if (tiles.length > 0) return;
+      var b = document.getElementById('mapError');
+      if (!b) return;
+      b.innerHTML =
+        '<strong>지도 타일을 불러오지 못했습니다</strong>' +
+        '<span>NCP 콘솔 → Maps → Application → <b>art-map</b> 확인 사항<br />' +
+        '① <b>Web Dynamic Map</b> 서비스가 체크되어 있는가<br />' +
+        '② <b>Web 서비스 URL</b>에 <code>' + location.origin + '</code> 이 등록되어 있는가</span>' +
+        '<span class="dim">Key ID: ior0d6uleb · 목록과 거리 정렬은 정상 동작합니다.</span>';
+      b.hidden = false;
+    }, 6000);
   }
 
   function bindUI() {

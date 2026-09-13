@@ -266,5 +266,26 @@ a { color: var(--accent); }
   .toast { bottom: 32px; left: calc(50% + 190px); }
 }
 
-/* 인증 실패 시 지도 영역 숨김 */
-.map-auth-failed .boot .spinner { display: none; }
+/* ── 지도 로드 실패 배너 ─────────────────────────────────── */
+#map { background: #e8eaed; }   /* 타일이 안 뜰 때 검은 화면 대신 회색 */
+
+.map-error {
+  position: absolute; z-index: 12;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 32px));
+  background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow); border: 1px solid #f1c5c5;
+  padding: 18px 20px; text-align: center;
+  display: flex; flex-direction: column; gap: 8px;
+  font-size: 13px; line-height: 1.6;
+}
+.map-error strong { color: #c62828; font-size: 15px; }
+.map-error code {
+  background: var(--surface-2); padding: 2px 6px; border-radius: 5px;
+  font-size: 12px; word-break: break-all;
+}
+.map-error .dim { color: var(--text-dim); font-size: 12px; }
+
+@media (min-width: 720px) {
+  .map-error { left: calc(50% + 190px); }
+}

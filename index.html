@@ -16,16 +16,20 @@
 <link rel="stylesheet" href="assets/style.css" />
 
 <script>
-  // 네이버 지도 인증 실패 시 원인을 화면에 노출 (maps.js 로드 전에 정의되어야 함)
+  // 네이버 지도 인증 실패 콜백. maps.js 로드 전에 정의되어야 한다.
+  // 인증 실패는 지도 생성 후 비동기로 발생하므로, 부팅 오버레이가 이미 사라진
+  // 뒤일 수 있다. 따라서 오버레이와 무관한 별도 배너로 띄운다.
+  window.__mapAuthFailed = false;
   window.navermap_authFailure = function () {
-    document.documentElement.classList.add('map-auth-failed');
-    var el = document.getElementById('bootMessage');
-    if (el) {
-      el.innerHTML =
-        '<strong>네이버 지도 인증 실패</strong><br />' +
-        'NCP 콘솔 &gt; Maps &gt; 해당 애플리케이션의 <b>Web 서비스 URL</b>에<br />' +
-        '현재 도메인이 등록되어 있는지 확인하세요.';
-    }
+    window.__mapAuthFailed = true;
+    var b = document.getElementById('mapError');
+    if (!b) return;
+    b.innerHTML =
+      '<strong>네이버 지도 인증 실패</strong>' +
+      '<span>NCP 콘솔 → Maps → Application → <b>art-map</b> 의 ' +
+      '<b>Web 서비스 URL</b>에 <code>' + location.origin + '</code> 을 등록해야 합니다.</span>' +
+      '<span class="dim">Key ID: ior0d6uleb · 반영까지 몇 분 걸릴 수 있습니다.</span>';
+    b.hidden = false;
   };
 </script>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=ior0d6uleb"></script>
@@ -34,6 +38,9 @@
 
 <body>
   <div id="map" aria-label="지도"></div>
+
+  <!-- 지도 로드 실패 배너 (부팅 오버레이와 독립) -->
+  <div id="mapError" class="map-error" hidden></div>
 
   <!-- 상단: 검색 + 분야 필터 ------------------------------------- -->
   <header class="topbar">
