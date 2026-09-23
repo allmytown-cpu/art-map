@@ -214,5 +214,29 @@
   "url": "https://www.opengallery.co.kr/exhibition/5362/",
   "desc": "참여작가: 다수 / 관람시간: 10:30 ~ 20:00 월-목: 10:30-20:00 (입장마감 19:00) 금-일, 공휴일: 10:30-20:30 (입장마감 19:30)",
   "addedAt": "2026-09-13"
+ },
+ {
+  "id": "mou3gy6",
+  "source": "manual",
+  "sourceUrl": "https://art-map.co.kr/exhibition/view.php?idx=32432",
+  "adapter": "art-map.co.kr",
+  "title": "Kwon Yong-rae Solo Exhibition : BECOMING",
+  "category": "exhibition",
+  "realm": "전시",
+  "start": "2026-10-01",
+  "end": "2026-10-31",
+  "place": "갤러리조은",
+  "area": "서울",
+  "sigungu": "",
+  "address": "서울 용산구 한남동 739-24/1층",
+  "lat": null,
+  "lng": null,
+  "geo": null,
+  "thumbnail": "https://media.art-map.co.kr/art-map/public/upload/exhibition/638f84dc1f296ba307c5b2b3716cc06f_125409_3602944_1789620221306742902.jpg",
+  "price": "무료",
+  "phone": "02-790-5889",
+  "url": "https://galleryjoeun.com/kor/main/",
+  "desc": "참여작가: 권용래 / 관람시간: Mon - Sat : 10am - 6pm / 휴관: Closed : Sun, National holiday",
+  "addedAt": "2026-09-23"
  }
 ]
