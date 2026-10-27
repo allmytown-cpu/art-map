@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-26T23:58:53.394Z",
+  "updatedAt": "2026-10-27T00:24:44.143Z",
   "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
   "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
   "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
@@ -8,13 +8,13 @@
     "to": "20301231",
     "basis": "endDate"
   },
-  "total": 1004,
-  "withCoord": 876,
+  "total": 1089,
+  "withCoord": 959,
   "byCategory": {
-    "performance": 588,
-    "exhibition": 283,
-    "education": 101,
-    "festival": 32
+    "performance": 655,
+    "exhibition": 295,
+    "education": 102,
+    "festival": 37
   },
   "byRealm": {
     "연극": 138,
@@ -30,37 +30,37 @@
   },
   "geocodedAt": "2026-09-13T13:41:15.965Z",
   "bySource": {
-    "kcisa": 1000,
+    "kcisa": 1085,
     "manual": 4
   },
   "sources": {
     "manual": 10,
     "artmap": 0,
-    "kcisa": 1112
+    "kcisa": 1086
   },
   "duplicatesMerged": 1,
   "kcisa": {
-    "fetchedAt": "2026-10-25T23:13:44.688Z",
+    "fetchedAt": "2026-10-27T00:24:43.960Z",
     "source": "공공데이터포털 · 한국문화정보원 한눈에보는문화정보 조회서비스",
     "sourceUrl": "https://www.data.go.kr/data/15138937/openapi.do",
     "endpoint": "https://apis.data.go.kr/B553457/cultureinfo/period2",
     "range": {
-      "from": "20261025",
+      "from": "20261027",
       "to": "20301231",
       "basis": "endDate"
     },
-    "total": 1112,
-    "withCoord": 966,
+    "total": 1086,
+    "withCoord": 951,
     "byRealm": {
-      "연극": 150,
-      "전시": 305,
-      "뮤지컬/오페라": 89,
-      "교육/체험": 105,
-      "무용/발레": 42,
-      "음악/콘서트": 324,
-      "기타": 16,
+      "연극": 124,
+      "전시": 292,
+      "뮤지컬/오페라": 84,
+      "교육/체험": 102,
+      "무용/발레": 36,
+      "음악/콘서트": 358,
+      "기타": 15,
       "국악": 32,
-      "행사/축제": 43,
+      "행사/축제": 37,
       "아동/가족": 6
     }
   }
